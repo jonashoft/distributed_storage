@@ -2,7 +2,7 @@ from flask import Flask, make_response, request
 import random
 import base64
 import zmq
-import strategy
+from strategy import random_placement, min_copysets_placement, buddy_approach
 
 context = zmq.Context()
 socket = context.socket(zmq.PUSH)

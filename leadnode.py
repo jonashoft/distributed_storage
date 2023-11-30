@@ -4,10 +4,10 @@ import base64
 import zmq
 import time
 from strategy import random_placement, min_copysets_placement, buddy_approach
+import math
 
 app = Flask(__name__)
 context = zmq.Context()
-
 
 # Function to create and connect sockets
 def create_sockets(context, base_port, number_of_nodes):
@@ -23,23 +23,6 @@ def create_sockets(context, base_port, number_of_nodes):
 base_port = 5555
 number_of_nodes = 17  # Adjust this based on the number of data nodes
 sockets = create_sockets(context, base_port, number_of_nodes)
-
-
-
-@app.route('/test')
-def test_data_nodes():
-    test_message = "Hello from Lead Node"
-    for i, socket in enumerate(sockets):
-        socket.send_string(f"{test_message} to Data Node {i}")
-        time.sleep(1)
-    return f"Sent test message to {number_of_nodes} data nodes."
-
-
-
-@app.route('/')
-def hello():
-    return make_response({'message': 'Namenode'})
-#
 
 # Endpoint for uploading files
 # Splits file into 4 equal sized fragments and generates k full replicas on N different nodes
@@ -62,14 +45,19 @@ def add_files():
     if strategy not in valid_strategies:
         return make_response({'message': 'Invalid strategy parameter'}, 400)
 
+    # Test data
+    file_data = "abcdefghijklmnopqrstuvwxyz"
+
     # Split file into 4 equal sized fragments
     file_size = len(file_data)
-    fragment_size = int(file_size / 4)
+
+    fragment_size = math.ceil(file_size / 4)
     fragments = []
 
+    # Create fragments
     for i in range(0, file_size, fragment_size):
         fragments.append(file_data[i:i+fragment_size])
-    
+
     # Generate k full replicas on N different nodes
     k = 3
     N = 17

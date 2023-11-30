@@ -50,15 +50,16 @@ def min_copysets_placement(fragments, k, N, sockets):
     print(f"Start index: {random_group_index}")
 
     # Iterate over each fragment and send it to a replication group
-    for fragment in fragments:
-        # Select random replication group for the fragment
-        print(f"Sending fragment to replication group {random_group_index}, nodes: {replication_groups[random_group_index]}")
+    for i, fragment in enumerate(fragments):
+        # Calculate the replication group index, wrapping around if necessary
+        group_index = (random_group_index + i) % len(replication_groups)
+        print(f"Sending fragment to replication group {group_index}, nodes: {replication_groups[group_index]}")
         
         # Send the fragment to each node in the selected replication group
-        for node in replication_groups[random_group_index]:
+        for node in replication_groups[group_index]:
             # Assuming the node index corresponds to the socket index
             socket = sockets[node]
-            socket.send_string(f"Fragment to node {node}") #deleted {fragment}
+            socket.send_string(f"Fragment to node {node}: {fragment}")
     
 
 

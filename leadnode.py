@@ -2,14 +2,39 @@ from flask import Flask, make_response, request
 import random
 import base64
 import zmq
+import time
 from strategy import random_placement, min_copysets_placement, buddy_approach
 
-context = zmq.Context()
-socket = context.socket(zmq.PUSH)
-socket.bind("tcp://*:5556")  # Bind to port 5555
-
-
 app = Flask(__name__)
+context = zmq.Context()
+
+
+# Function to create and connect sockets
+def create_sockets(context, base_port, number_of_nodes):
+    sockets = []
+    for i in range(number_of_nodes):
+        port = base_port + i
+        socket = context.socket(zmq.PUSH)
+        socket.connect(f"tcp://localhost:{port}")
+        sockets.append(socket)
+    return sockets
+
+# Creating and connecting sockets for each data node
+base_port = 5555
+number_of_nodes = 17  # Adjust this based on the number of data nodes
+sockets = create_sockets(context, base_port, number_of_nodes)
+
+
+
+@app.route('/test')
+def test_data_nodes():
+    test_message = "Hello from Lead Node"
+    for i, socket in enumerate(sockets):
+        socket.send_string(f"{test_message} to Data Node {i}")
+        time.sleep(1)
+    return f"Sent test message to {number_of_nodes} data nodes."
+
+
 
 @app.route('/')
 def hello():
@@ -47,13 +72,13 @@ def add_files():
     
     # Generate k full replicas on N different nodes
     k = 3
-    N = 5
+    N = 17
 
     # Call the appropriate function based on the strategy
     if strategy == 'random':
         random_placement(fragments, k, N)
     elif strategy == 'min_copysets':
-        min_copysets_placement(fragments, k, N)
+        min_copysets_placement(fragments, k, N, sockets)
     elif strategy == 'buddy':
         buddy_approach(fragments, k, N)
 

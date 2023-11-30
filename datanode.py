@@ -1,19 +1,25 @@
+import sys
 import zmq
-import base64
 
-# Create a ZeroMQ context
-context = zmq.Context()
+def redirect_output(log_file_path):
+    sys.stdout = open(log_file_path, 'a', buffering=1)
+    sys.stderr = sys.stdout
 
-# Create a PULL socket
-socket = context.socket(zmq.PULL)
+def start_data_node(node_id, port, log_file_path):
+    redirect_output(log_file_path)
 
-# Connect to the lead node
-socket.connect("tcp://localhost:5556")  # Replace with the actual address of your lead node
+    context = zmq.Context()
+    socket = context.socket(zmq.PULL)
+    socket.bind(f"tcp://*:{port}")
 
-# Keep receiving and printing messages
-while True:
-    print("Hej!")
-    message = socket.recv()
-    
+    print(f"Data node {node_id} started on port {port}")
 
-    print("Received message!")
+    while True:
+        message = socket.recv()
+        print(f"Data node {node_id} received: {message}")
+
+if __name__ == "__main__":
+    node_id = sys.argv[1]
+    port = sys.argv[2]
+    log_file_path = sys.argv[3]
+    start_data_node(node_id, port, log_file_path)

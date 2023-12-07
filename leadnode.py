@@ -8,6 +8,12 @@ import math
 app = Flask(__name__)
 context = zmq.Context()
 
+# Replication factor
+k = 3
+
+# Number of nodes
+N = 17
+
 # Function to create and connect sockets
 def create_sockets(context, base_port, number_of_nodes):
     sockets = []
@@ -21,13 +27,7 @@ def create_sockets(context, base_port, number_of_nodes):
 # Creating and connecting sockets for each data node
 base_port = 5555
 number_of_nodes = 17  # Adjust this based on the number of data nodes
-sockets = create_sockets(context, base_port, number_of_nodes)
-
-# Replication factor
-k = 3
-
-# Number of nodes
-N = 17
+sockets = create_sockets(context, base_port, N)
 
 # Endpoint for uploading files
 # Splits file into 4 equal sized fragments and generates k full replicas on N different nodes

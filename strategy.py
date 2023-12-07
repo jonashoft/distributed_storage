@@ -1,6 +1,9 @@
+import math
 import random
 import base64
 import messages_pb2
+import numpy as np
+import random
 
 def random_placement(fragments, k, N):
 
@@ -63,7 +66,33 @@ def min_copysets_placement(fragments, k, N, sockets):
     
 
 
-def buddy_approach(fragments, k, N):
-    print("Hello from buddy_approach")
-    # Implement the logic for buddy approach strategy
-    pass
+def buddy_approach(fragments, k, N, numberOfGroups, sockets):
+    # Print fragments
+    print(f"Fragments: {fragments}")
+    print(f"k: {k} \nN: {N}")
+
+    # Ensure there are enough nodes to form at least one copyset
+    if N < k * len(fragments):
+        print("Not enough nodes to form separate copysets for all fragments")
+        return
+    
+    # Create a list of node IDs
+    nodes = list(range(N))
+    print(f"Nodes: {nodes}")
+
+    numberOfNodesPerGroup = int(N / numberOfGroups)
+
+    # Create a list of groups
+    listOfGroups = [nodes[i:i+numberOfNodesPerGroup] for i in range(0, N, numberOfNodesPerGroup)]
+    while len(listOfGroups) > numberOfGroups:
+        listOfGroups.pop()  # Remove the last element
+    print(f"List of Groups: {listOfGroups}")
+
+    # Pick a random group of nodes from listOfGroups
+    random_group = random.choice(listOfGroups)
+    print(f"Random group of nodes selected: {random_group}")
+
+    for node in random_group:
+        # Assuming the node index corresponds to the socket index
+        socket = sockets[node]
+        socket.send_string(f"Fragment to node {node}: {fragments.pop()}")

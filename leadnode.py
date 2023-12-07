@@ -62,13 +62,15 @@ def add_files():
     k = 3
     N = 17
 
+    numberOfGroups = 4 # Number of groups to split the nodes into for buddy approach
+
     # Call the appropriate function based on the strategy
     if strategy == 'random':
         random_placement(fragments, k, N)
     elif strategy == 'min_copysets':
         min_copysets_placement(fragments, k, N, sockets)
     elif strategy == 'buddy':
-        buddy_approach(fragments, k, N)
+        buddy_approach(fragments, k, N, numberOfGroups, sockets)
 
     return make_response({'message': 'File uploaded successfully'}, 201)
 #

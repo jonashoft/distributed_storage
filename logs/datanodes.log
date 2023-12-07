@@ -15,3 +15,36 @@ Data node 16 started on port 5571
 Data node 14 started on port 5569
 Data node 12 started on port 5567
 Data node 15 started on port 5570
+Data node 5 started on port 5560
+Data node 13 started on port 5568
+Data node 7 started on port 5562
+Data node 4 started on port 5559
+Data node 8 started on port 5563
+Data node 6 started on port 5561
+Data node 15 started on port 5570
+Data node 9 started on port 5564
+Data node 11 started on port 5566
+Data node 16 started on port 5571
+Data node 0 started on port 5555
+Data node 3 started on port 5558
+Data node 10 started on port 5565
+Data node 1 started on port 5556
+Data node 14 started on port 5569
+Data node 12 started on port 5567
+Data node 2 started on port 5557
+Data node 9 received: b'Fragment to node 9: opqrstu'
+Data node 8 received: b'Fragment to node 8: vwxyz'
+Data node 10 received: b'Fragment to node 10: hijklmn'
+Data node 11 received: b'Fragment to node 11: abcdefg'
+Data node 3 received: b'Fragment to node 3: abcdefg'
+Data node 1 received: b'Fragment to node 1: opqrstu'
+Data node 0 received: b'Fragment to node 0: vwxyz'
+Data node 2 received: b'Fragment to node 2: hijklmn'
+Data node 4 received: b'Fragment to node 4: vwxyz'
+Data node 6 received: b'Fragment to node 6: hijklmn'
+Data node 7 received: b'Fragment to node 7: abcdefg'
+Data node 5 received: b'Fragment to node 5: opqrstu'
+Data node 0 received: b'Fragment to node 0: vwxyz'
+Data node 3 received: b'Fragment to node 3: abcdefg'
+Data node 2 received: b'Fragment to node 2: hijklmn'
+Data node 1 received: b'Fragment to node 1: opqrstu'

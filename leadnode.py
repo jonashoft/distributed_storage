@@ -67,6 +67,15 @@ def add_files():
 
     numberOfGroups = 4 # Number of groups to split the nodes into for buddy approach
 
+    # Print fragments
+    print(f"Fragments: {fragments}")
+    print(f"k: {k} \nN: {N}")
+
+    # Ensure there are enough nodes to form at least one copyset
+    if N < k * len(fragments):
+        print("Not enough nodes to form separate copysets for all fragments")
+        return
+
     # Call the appropriate function based on the strategy
     if strategy == 'random':
         random_placement(fragments)
@@ -80,15 +89,6 @@ def add_files():
    
 
 def random_placement(fragments):
-    # Print fragments
-    print(f"Fragments: {fragments}")
-    print(f"k: {k} \nN: {N}")
-
-    # Ensure there are enough nodes to form at least one copyset
-    if N < k * len(fragments):
-        print("Not enough nodes to form separate copysets for all fragments")
-        return
-    
     # Shuffle the list of nodes
     nodes = list(range(N))
     random.shuffle(nodes)
@@ -104,18 +104,6 @@ def random_placement(fragments):
             # Send the fragment to the node using the appropriate method
 
 def min_copysets_placement(fragments):
-    # Print fragments
-    print(f"Fragments: {fragments}")
-    print(f"k: {k} \nN: {N}")
-
-
-    required_nodes = k * len(fragments)
-
-     # Ensure there are enough nodes to form at least one copyset
-    if N < required_nodes:
-        print("Not enough nodes to form separate copysets for all fragments")
-        return
-
     # Create a list of node IDs
     nodes = list(range(N))
 
@@ -152,15 +140,6 @@ def min_copysets_placement(fragments):
     
 
 def buddy_approach(fragments, numberOfGroups):
-    # Print fragments
-    print(f"Fragments: {fragments}")
-    print(f"k: {k} \nN: {N}")
-
-    # Ensure there are enough nodes to form at least one copyset
-    if N < k * len(fragments):
-        print("Not enough nodes to form separate copysets for all fragments")
-        return
-    
     # Create a list of node IDs
     nodes = list(range(N))
     print(f"Nodes: {nodes}")

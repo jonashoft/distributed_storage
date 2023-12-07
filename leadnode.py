@@ -26,7 +26,6 @@ def create_sockets(context, base_port, number_of_nodes):
 
 # Creating and connecting sockets for each data node
 base_port = 5555
-number_of_nodes = 17  # Adjust this based on the number of data nodes
 sockets = create_sockets(context, base_port, N)
 
 # Endpoint for uploading files

@@ -6,10 +6,24 @@ import numpy as np
 import random
 
 def random_placement(fragments, k, N):
+    # Ensure there are enough nodes to form at least one copyset
+    if N < k * len(fragments):
+        print("Not enough nodes to form separate copysets for all fragments")
+        return
+    
+    # Shuffle the list of nodes
+    nodes = list(range(N))
+    random.shuffle(nodes)
 
-    print("Hello from random_placement")
-    # Implement the logic for random placement strategy
-    pass
+    # Iterate over each fragment
+    for fragment in fragments:
+        # Select k random nodes for replication
+        replication_nodes = random.sample(nodes, k)
+
+        # Send the fragment to each replication node
+        for node in replication_nodes:
+            print(f"Sending fragment to node {node}: {fragment}")
+            # Send the fragment to the node using the appropriate method
 
 def min_copysets_placement(fragments, k, N, sockets):
     # Print fragments

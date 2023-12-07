@@ -1,9 +1,5 @@
 import math
 import random
-import base64
-import messages_pb2
-import numpy as np
-import random
 
 def random_placement(fragments, k, N):
     # Ensure there are enough nodes to form at least one copyset

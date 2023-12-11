@@ -16,6 +16,7 @@ def start_data_node(node_id, port, log_file_path):
 
     while True:
         message = socket.recv()
+        ## Save file content as bin and send back name of bin file
         print(f"Data node {node_id} received: {message}")
 
 if __name__ == "__main__":

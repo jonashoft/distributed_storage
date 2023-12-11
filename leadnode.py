@@ -9,10 +9,10 @@ app = Flask(__name__)
 context = zmq.Context()
 
 # Replication factor
-k = 3
+k = 5
 
 # Number of nodes
-N = 17
+N = 100
 
 # Function to create and connect sockets
 def create_sockets(context, base_port, number_of_nodes):
@@ -65,7 +65,7 @@ def add_files():
     # Generate k full replicas on N different nodes
 
 
-    numberOfGroups = 4 # Number of groups to split the nodes into for buddy approach
+    numberOfGroups = 6 # Number of groups to split the nodes into for buddy approach
 
     # Print fragments
     print(f"Fragments: {fragments}")
@@ -77,13 +77,16 @@ def add_files():
         return
 
     # Call the appropriate function based on the strategy
+    storageFailed = False
     if strategy == 'random':
-        random_placement(fragments)
+        storageFailed = random_placement(fragments)
     elif strategy == 'min_copysets':
-        min_copysets_placement(fragments)
+        storageFailed = min_copysets_placement(fragments)
     elif strategy == 'buddy':
-        buddy_approach(fragments, numberOfGroups)
+        storageFailed = buddy_approach(fragments, numberOfGroups)
 
+    if storageFailed:
+        return make_response({'message': 'Storage failed'}, 500)
     return make_response({'message': 'File uploaded successfully'}, 201)
 #
    
@@ -93,13 +96,19 @@ def random_placement(fragments):
     nodes = list(range(N))
     random.shuffle(nodes)
 
-    # Iterate over each fragment
-    for fragment in fragments:
-        # Select k random nodes for replication
-        replication_nodes = random.sample(nodes, k)
+    if len(fragments) * k > N:
+        print("Not enough nodes to form separate copysets for all fragments")
+        return  
 
-        # Send the fragment to each replication node
-        for node in replication_nodes:
+    # Select k * fragments random nodes for replication
+    replication_nodes = random.sample(nodes, k * len(fragments))
+
+    # Send each fragment to k number of nodes
+    for fragment in fragments:
+        # Send the fragment to k number of nodes
+        for i in range(k):
+            # Select the next node from the list of replication nodes
+            node = replication_nodes.pop()
             print(f"Sending fragment to node {node}: {fragment}")
             # Send the fragment to the node using the appropriate method
 
@@ -107,41 +116,30 @@ def min_copysets_placement(fragments):
     # Create a list of node IDs
     nodes = list(range(N))
 
-    # Determine the number of extra nodes
-    extra_nodes = N % k
-    print(f"Extra nodes: {extra_nodes}")
-
-    # Create a list of node IDs
-    nodes = list(range(N - extra_nodes))
-    print(f"Nodes: {nodes}")
-
-    # Initialize the data structure for replication groups
+    # Create a list of nodes where each list contains k nodes
     replication_groups = [nodes[i:i + k] for i in range(0, len(nodes), k)]
 
-    # Distribute the extra nodes among the replication groups
-    for i in range(extra_nodes):
-        replication_groups[i % len(replication_groups)].append(N - i - 1)
+    # While length of replication_groups is not divisible by k 
+    while len(replication_groups) % k != 0:
+        # Remove the last element
+        replication_groups.pop()
 
-    # Select random replication group for first fragment
-    random_group_index = random.randint(0, len(replication_groups) - 1)
-    print(f"Start index: {random_group_index}")
+    # Shuffle groups and select random replication group
+    random.shuffle(replication_groups)
+    random_group = random.choice(replication_groups)
+    print("selected group: ", random_group)
 
-    # Iterate over each fragment and send it to a replication group
-    for i, fragment in enumerate(fragments):
-        # Calculate the replication group index, wrapping around if necessary
-        group_index = (random_group_index + i) % len(replication_groups)
-        print(f"Sending fragment to replication group {group_index}, nodes: {replication_groups[group_index]}")
-        
-        # Send the fragment to each node in the selected replication group
-        for node in replication_groups[group_index]:
+    # Send all fragments to each node in random_group
+    for node in random_group:
+        # Send each fragment to each node in the selected replication group
+        for fragment in fragments:
             # Assuming the node index corresponds to the socket index
-            socket = sockets[node]
-            socket.send_string(f"Fragment to node {node}: {fragment}")
-    
+            print(f"Sending fragment to node {node}: {fragment}")
 
 def buddy_approach(fragments, numberOfGroups):
     # Create a list of node IDs
     nodes = list(range(N))
+    random.shuffle(nodes)
     print(f"Nodes: {nodes}")
 
     numberOfNodesPerGroup = int(N / numberOfGroups)
@@ -156,10 +154,17 @@ def buddy_approach(fragments, numberOfGroups):
     random_group = random.choice(listOfGroups)
     print(f"Random group of nodes selected: {random_group}")
 
-    for node in random_group:
-        # Assuming the node index corresponds to the socket index
-        socket = sockets[node]
-        socket.send_string(f"Fragment to node {node}: {fragments.pop()}")
+    # Send each fragment to k number of nodes in the selected group
+    for fragment in fragments:
+        selected_group = random_group.copy()
+        # Send the fragment to k number of nodes in the selected group
+        for i in range(k):
+            # Select the next node from the list of nodes in the selected group
+            node = random.choice(selected_group)
+            selected_group.remove(node)
+            print(f"Sending fragment to node {node}: {fragment}")
+            # Send the fragment to the node using the appropriate method
+
 
 # Start the Flask app (must be after the endpoint functions) 
 host_local_computer = "localhost" # Listen for connections on the local computer

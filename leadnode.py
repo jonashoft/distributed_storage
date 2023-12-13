@@ -90,15 +90,10 @@ def add_files():
     return make_response({'message': 'File uploaded successfully'}, 201)
 #
    
-
 def random_placement(fragments):
     # Shuffle the list of nodes
     nodes = list(range(N))
     random.shuffle(nodes)
-
-    if len(fragments) * k > N:
-        print("Not enough nodes to form separate copysets for all fragments")
-        return  
 
     # Select k * fragments random nodes for replication
     replication_nodes = random.sample(nodes, k * len(fragments))

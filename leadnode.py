@@ -4,15 +4,17 @@ import base64
 import zmq
 import time
 import math
+from messages_pb2 import storedata_request
+import os
 
 app = Flask(__name__)
 context = zmq.Context()
 
 # Replication factor
-k = 5
+k = 3
 
 # Number of nodes
-N = 100
+N = 20
 
 # Function to create and connect sockets
 def create_sockets(context, base_port, number_of_nodes):
@@ -25,7 +27,7 @@ def create_sockets(context, base_port, number_of_nodes):
     return sockets
 
 # Creating and connecting sockets for each data node
-base_port = 5555
+base_port = 5556
 sockets = create_sockets(context, base_port, N)
 
 # Endpoint for uploading files
@@ -106,6 +108,11 @@ def random_placement(fragments):
             node = replication_nodes.pop()
             print(f"Sending fragment to node {node}: {fragment}")
             # Send the fragment to the node using the appropriate method
+            dummy_data = generate_dummy_data()
+            send_test_data(node, test_data=dummy_data)  # Send to the first data node for testing
+
+
+
 
 def min_copysets_placement(fragments):
     # Create a list of node IDs
@@ -130,6 +137,7 @@ def min_copysets_placement(fragments):
         for fragment in fragments:
             # Assuming the node index corresponds to the socket index
             print(f"Sending fragment to node {node}: {fragment}")
+            
 
 def buddy_approach(fragments, numberOfGroups):
     # Create a list of node IDs
@@ -161,10 +169,24 @@ def buddy_approach(fragments, numberOfGroups):
             # Send the fragment to the node using the appropriate method
 
 
+def send_test_data(node_id, test_data, filename="testfile.bin"):
+    # Create a Protobuf message
+    request = storedata_request()
+    request.filename = filename
+    request.filedata = test_data  # Your dummy binary data
+
+    # Serialize the Protobuf message
+    serialized_request = request.SerializeToString()
+
+    # Send the serialized data
+    sockets[node_id].send(serialized_request)
+    print(f"Sent data to node {node_id}")
+
+# Dummy data generation
+def generate_dummy_data(size=1024):
+    return os.urandom(size)  # Generates random binary data
+
 # Start the Flask app (must be after the endpoint functions) 
 host_local_computer = "localhost" # Listen for connections on the local computer
 host_local_network = "0.0.0.0" # Listen for connections on the local network
 app.run(host=host_local_computer, port=5555)
-
-
-

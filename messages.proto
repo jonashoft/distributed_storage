@@ -3,4 +3,12 @@ syntax = "proto3";
 message storedata_request
 {
     string filename = 1;
+    bytes filedata = 2;
+}
+
+
+message getdata_response
+{
+    string filename = 1;
+    bytes filedata = 2;
 }

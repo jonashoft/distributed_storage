@@ -4,8 +4,8 @@ import base64
 import zmq
 import time
 import math
-from messages_pb2 import storedata_request
 import os
+import messages_pb2
 
 app = Flask(__name__)
 context = zmq.Context()
@@ -29,6 +29,30 @@ def create_sockets(context, base_port, number_of_nodes):
 # Creating and connecting sockets for each data node
 base_port = 5556
 sockets = create_sockets(context, base_port, N)
+
+# Socket to receive messages from Storage Nodes
+response_socket = context.socket(zmq.PULL)
+response_socket.bind("tcp://*:5553")
+# Publisher socket for data request broadcasts
+data_req_socket = context.socket(zmq.PUB)
+data_req_socket.bind("tcp://*:5554")
+# Wait for all workers to start and connect.
+time.sleep(1)
+
+# Endpoint for requesting files
+@app.route('/files/<string:filename>',  methods=['GET'])
+def download_file(filename):
+    print(f"Downloading file {filename}")
+    request = messages_pb2.getdata_request()
+    request.filename = filename
+
+    data_req_socket.send(request.SerializeToString())
+
+    for _ in range(4):
+        response = messages_pb2.getdata_response()
+        response.ParseFromString(response_socket.recv())
+        print(f"Received: {response.data} from file: {response.filename}")
+    return make_response({'message': 'File downloaded successfully'}, 200)
 
 # Endpoint for uploading files
 # Splits file into 4 equal sized fragments and generates k full replicas on N different nodes

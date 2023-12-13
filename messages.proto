@@ -6,6 +6,10 @@ message storedata_request
     bytes filedata = 2;
 }
 
+message getdata_request
+{
+    string filename = 1;
+}
 
 message getdata_response
 {

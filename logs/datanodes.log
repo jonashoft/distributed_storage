@@ -1,0 +1,689 @@
+Data node 2 started on port 5557
+Data node 4 started on port 5559
+Data node 7 started on port 5562
+Data node 3 started on port 5558
+Data node 0 started on port 5555
+Data node 1 started on port 5556
+Data node 5 started on port 5560
+Data node 10 started on port 5565
+Data node 8 started on port 5563
+Data node 6 started on port 5561
+Data node 13 started on port 5568
+Data node 9 started on port 5564
+Data node 11 started on port 5566
+Data node 16 started on port 5571
+Data node 14 started on port 5569
+Data node 12 started on port 5567
+Data node 15 started on port 5570
+Data node 5 started on port 5560
+Data node 13 started on port 5568
+Data node 7 started on port 5562
+Data node 4 started on port 5559
+Data node 8 started on port 5563
+Data node 6 started on port 5561
+Data node 15 started on port 5570
+Data node 9 started on port 5564
+Data node 11 started on port 5566
+Data node 16 started on port 5571
+Data node 0 started on port 5555
+Data node 3 started on port 5558
+Data node 10 started on port 5565
+Data node 1 started on port 5556
+Data node 14 started on port 5569
+Data node 12 started on port 5567
+Data node 2 started on port 5557
+Data node 9 received: b'Fragment to node 9: opqrstu'
+Data node 8 received: b'Fragment to node 8: vwxyz'
+Data node 10 received: b'Fragment to node 10: hijklmn'
+Data node 11 received: b'Fragment to node 11: abcdefg'
+Data node 3 received: b'Fragment to node 3: abcdefg'
+Data node 1 received: b'Fragment to node 1: opqrstu'
+Data node 0 received: b'Fragment to node 0: vwxyz'
+Data node 2 received: b'Fragment to node 2: hijklmn'
+Data node 4 received: b'Fragment to node 4: vwxyz'
+Data node 6 received: b'Fragment to node 6: hijklmn'
+Data node 7 received: b'Fragment to node 7: abcdefg'
+Data node 5 received: b'Fragment to node 5: opqrstu'
+Data node 0 received: b'Fragment to node 0: vwxyz'
+Data node 3 received: b'Fragment to node 3: abcdefg'
+Data node 2 received: b'Fragment to node 2: hijklmn'
+Data node 1 received: b'Fragment to node 1: opqrstu'
+Data node 6 started on port 5561
+Data node 1 started on port 5556
+Data node 7 started on port 5562
+Traceback (most recent call last):
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 26, in <module>
+    start_data_node(node_id, port, log_file_path)
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 13, in start_data_node
+    socket.bind(f"tcp://*:{port}")
+  File "/opt/homebrew/lib/python3.11/site-packages/zmq/sugar/socket.py", line 302, in bind
+    super().bind(addr)
+  File "zmq/backend/cython/socket.pyx", line 564, in zmq.backend.cython.socket.Socket.bind
+  File "zmq/backend/cython/checkrc.pxd", line 28, in zmq.backend.cython.checkrc._check_rc
+zmq.error.ZMQError: Address already in use (addr='tcp://*:5559')
+Traceback (most recent call last):
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 26, in <module>
+    start_data_node(node_id, port, log_file_path)
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 13, in start_data_node
+    socket.bind(f"tcp://*:{port}")
+  File "/opt/homebrew/lib/python3.11/site-packages/zmq/sugar/socket.py", line 302, in bind
+    super().bind(addr)
+  File "zmq/backend/cython/socket.pyx", line 564, in zmq.backend.cython.socket.Socket.bind
+  File "zmq/backend/cython/checkrc.pxd", line 28, in zmq.backend.cython.checkrc._check_rc
+zmq.error.ZMQError: Address already in use (addr='tcp://*:5558')
+Data node 2 started on port 5557
+Data node 5 started on port 5560
+Data node 8 started on port 5563
+Data node 9 started on port 5564
+Data node 0 started on port 5555
+Data node 0 started on port 5555
+Data node 6 started on port 5561
+Traceback (most recent call last):
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 33, in <module>
+    start_data_node(node_id, port, log_file_path)
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 13, in start_data_node
+    socket.bind(f"tcp://*:{port}")
+  File "/opt/homebrew/lib/python3.11/site-packages/zmq/sugar/socket.py", line 302, in bind
+    super().bind(addr)
+  File "zmq/backend/cython/socket.pyx", line 564, in zmq.backend.cython.socket.Socket.bind
+  File "zmq/backend/cython/checkrc.pxd", line 28, in zmq.backend.cython.checkrc._check_rc
+zmq.error.ZMQError: Address already in use (addr='tcp://*:5559')
+Data node 5 started on port 5560
+Traceback (most recent call last):
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 33, in <module>
+    start_data_node(node_id, port, log_file_path)
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 13, in start_data_node
+    socket.bind(f"tcp://*:{port}")
+  File "/opt/homebrew/lib/python3.11/site-packages/zmq/sugar/socket.py", line 302, in bind
+    super().bind(addr)
+  File "zmq/backend/cython/socket.pyx", line 564, in zmq.backend.cython.socket.Socket.bind
+  File "zmq/backend/cython/checkrc.pxd", line 28, in zmq.backend.cython.checkrc._check_rc
+zmq.error.ZMQError: Address already in use (addr='tcp://*:5558')
+Data node 7 started on port 5562
+Data node 2 started on port 5557
+Data node 1 started on port 5556
+Data node 8 started on port 5563
+Data node 9 started on port 5564
+/// Her er jeg
+Data node 7 started on port 5562
+Data node 9 started on port 5564
+Data node 6 started on port 5561
+Data node 0 started on port 5555
+Data node 5 started on port 5560
+Data node 1 started on port 5556
+Data node 8 started on port 5563
+Data node 4 started on port 5559
+Data node 2 started on port 5557
+Data node 3 started on port 5558
+Data node 2 started on port 5557
+Data node 8 started on port 5563
+Data node 9 started on port 5564
+Data node 0 started on port 5555
+Data node 1 started on port 5556
+Data node 3 started on port 5558
+Data node 6 started on port 5561
+Data node 4 started on port 5559
+Data node 7 started on port 5562
+Data node 5 started on port 5560
+Data node 5 started on port 5560
+Data node 4 started on port 5559
+Data node 8 started on port 5563
+Data node 0 started on port 5555
+Data node 7 started on port 5562
+Data node 1 started on port 5556
+Data node 2 started on port 5557
+Data node 6 started on port 5561
+Data node 3 started on port 5558
+Data node 9 started on port 5564
+Data node 2 started on port 5557
+Data node 7 started on port 5562
+Data node 8 started on port 5563
+Data node 4 started on port 5559
+Data node 3 started on port 5558
+Data node 0 started on port 5555
+Data node 1 started on port 5556
+Data node 5 started on port 5560
+Data node 6 started on port 5561
+Data node 9 started on port 5564
+Data node 5 started on port 5560
+Data node 4 started on port 5559
+Data node 1 started on port 5556
+Data node 9 started on port 5564
+Data node 7 started on port 5562
+Data node 3 started on port 5558
+Data node 2 started on port 5557
+Data node 6 started on port 5561
+Data node 0 started on port 5555
+Data node 8 started on port 5563
+test {<zmq.Socket(zmq.SUB) at 0x1057b0520>: 1}
+test {<zmq.Socket(zmq.SUB) at 0x105930520>: 1}
+test {<zmq.Socket(zmq.SUB) at 0x1053a8520>: 1}
+Data chunk request: b'abcdefg'
+test {<zmq.Socket(zmq.SUB) at 0x103988520>: 1}
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+test {<zmq.Socket(zmq.SUB) at 0x1053a8520>: 1}
+test {<zmq.Socket(zmq.SUB) at 0x100c1c520>: 1}
+Data chunk request: b'hijklmn'
+test {<zmq.Socket(zmq.SUB) at 0x105930520>: 1}
+Data chunk request: b'hijklmn'
+test {<zmq.Socket(zmq.SUB) at 0x10182c520>: 1}
+test {<zmq.Socket(zmq.SUB) at 0x103988520>: 1}
+Data chunk request: b'abcdefg'
+test {<zmq.Socket(zmq.SUB) at 0x1057b0520>: 1}
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+test {<zmq.Socket(zmq.SUB) at 0x102f00520>: 1}
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+test {<zmq.Socket(zmq.SUB) at 0x1036f8520>: 1}
+test {<zmq.Socket(zmq.SUB) at 0x1053a8520>: 1}
+test {<zmq.Socket(zmq.SUB) at 0x105930520>: 1}
+test {<zmq.Socket(zmq.SUB) at 0x10182c520>: 1}
+test {<zmq.Socket(zmq.SUB) at 0x1057b0520>: 1}
+test {<zmq.Socket(zmq.SUB) at 0x103988520>: 1}
+test {<zmq.Socket(zmq.SUB) at 0x102f00520>: 1}
+Data chunk request: b'abcdefg'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'hijklmn'
+Data chunk request: b'opqrstu'
+Data chunk request: b'hijklmn'
+test {<zmq.Socket(zmq.SUB) at 0x100e70520>: 1}
+Data chunk request: b'abcdefg'
+test {<zmq.Socket(zmq.SUB) at 0x1053a8520>: 1}
+Data chunk request: b'vwxyz'
+test {<zmq.Socket(zmq.SUB) at 0x1057b0520>: 1}
+Data chunk request: b'vwxyz'
+test {<zmq.Socket(zmq.SUB) at 0x105930520>: 1}
+Data chunk request: b'vwxyz'
+test {<zmq.Socket(zmq.SUB) at 0x103220520>: 1}
+test {<zmq.Socket(zmq.SUB) at 0x10182c520>: 1}
+Data chunk request: b'abcdefg'
+test {<zmq.Socket(zmq.SUB) at 0x102f00520>: 1}
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+test {<zmq.Socket(zmq.SUB) at 0x103988520>: 1}
+Data chunk request: b'vwxyz'
+test {<zmq.Socket(zmq.SUB) at 0x100c1c520>: 1}
+Data chunk request: b'hijklmn'
+test {<zmq.Socket(zmq.SUB) at 0x1036f8520>: 1}
+Data chunk request: b'hijklmn'
+test {<zmq.Socket(zmq.SUB) at 0x100e70520>: 1}
+Data chunk request: b'hijklmn'
+test {<zmq.Socket(zmq.SUB) at 0x102f00520>: 1}
+Data chunk request: b'vwxyz'
+test {<zmq.Socket(zmq.SUB) at 0x10182c520>: 1}
+Data chunk request: b'vwxyz'
+test {<zmq.Socket(zmq.SUB) at 0x100c1c520>: 1}
+test {<zmq.Socket(zmq.SUB) at 0x1036f8520>: 1}
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+test {<zmq.Socket(zmq.SUB) at 0x103220520>: 1}
+Data chunk request: b'hijklmn'
+test {<zmq.Socket(zmq.SUB) at 0x100e70520>: 1}
+Data chunk request: b'opqrstu'
+test {<zmq.Socket(zmq.SUB) at 0x100c1c520>: 1}
+Data chunk request: b'vwxyz'
+test {<zmq.Socket(zmq.SUB) at 0x1036f8520>: 1}
+Data chunk request: b'vwxyz'
+test {<zmq.Socket(zmq.SUB) at 0x103220520>: 1}
+Data chunk request: b'opqrstu'
+test {<zmq.Socket(zmq.SUB) at 0x100e70520>: 1}
+Data chunk request: b'vwxyz'
+test {<zmq.Socket(zmq.SUB) at 0x103220520>: 1}
+Data chunk request: b'vwxyz'
+Data node 7 started on port 5562
+Data node 1 started on port 5556
+Data node 3 started on port 5558
+Data node 2 started on port 5557
+Data node 9 started on port 5564
+Data node 0 started on port 5555
+Data node 5 started on port 5560
+Data node 6 started on port 5561
+Data node 8 started on port 5563
+Data node 4 started on port 5559
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'hijklmn'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'vwxyz'
+Data chunk request: b'opqrstu'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data node 0 started on port 5555
+Data node 1 started on port 5556
+Data chunk request: b'abcdefg'
+Data chunk request: b'abcdefg'
+Data chunk request: b'hijklmn'
+Data chunk request: b'hijklmn'
+Data chunk request: b'opqrstu'
+Data chunk request: b'opqrstu'
+Data chunk request: b'vwxyz'
+Data chunk request: b'vwxyz'
+Data node 0 started on port 5555
+Data node 2 started on port 5557
+Data node 3 started on port 5558
+Data node 1 started on port 5556
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'// Her er jeg
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data chunk request: b'test: hjas'
+Data node 2 started on port 5557
+Data node 3 started on port 5558
+Data node 1 started on port 5556
+Data node 0 started on port 5555
+Data chunk request: b'\n\x04hjas'
+Data chunk request: b'\n\x04hjas'
+Data chunk request: b'\n\x04hjas'
+Data chunk request: b'\n\x04hjas'
+Data node 2 started on port 5557
+Data node 1 started on port 5556
+Data node 0 started on port 5555
+Data node 3 started on port 5558
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 53, in <module>
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 53, in <module>
+Traceback (most recent call last):
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 53, in <module>
+Traceback (most recent call last):
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 53, in <module>
+    start_data_node(node_id, port, log_file_path)
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 43, in start_data_node
+    start_data_node(node_id, port, log_file_path)
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 43, in start_data_node
+    response = messages_pb2.storedata_response()
+    start_data_node(node_id, port, log_file_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    response = messages_pb2.storedata_response()
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 43, in start_data_node
+AttributeError: module 'messages_pb2' has no attribute 'storedata_response'. Did you mean: 'getdata_response'?
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'messages_pb2' has no attribute 'storedata_response'. Did you mean: 'getdata_response'?
+    response = messages_pb2.storedata_response()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'messages_pb2' has no attribute 'storedata_response'. Did you mean: 'getdata_response'?
+    start_data_node(node_id, port, log_file_path)
+  File "/Users/jonashoft/Desktop/distributed_storage/datanode.py", line 43, in start_data_node
+    response = messages_pb2.storedata_response()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'messages_pb2' has no attribute 'storedata_response'. Did you mean: 'getdata_response'?
+Data node 1 started on port 5556
+Data node 0 started on port 5555
+Data node 3 started on port 5558
+Data node 2 started on port 5557
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data node 0 started on port 5555
+Data node 1 started on port 5556
+Data node 2 started on port 5557
+Data node 3 started on port 5558
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Found chunk <_io.BufferedReader name='test.bin'>, sending it back
+Found chunk <_io.BufferedReader name='test.bin'>, sending it back
+Found chunk <_io.BufferedReader name='test.bin'>, sending it back
+Found chunk <_io.BufferedReader name='test.bin'>, sending it back
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Data chunk request: hjas
+Found chunk <_io.BufferedReader name='test.bin'>, sending it back
+Found chunk <_io.BufferedReader name='test.bin'>, sending it back
+Found chunk <_io.BufferedReader name='test.bin'>, sending it back
+Found chunk <_io.BufferedReader name='test.bin'>, sending it back

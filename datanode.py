@@ -2,18 +2,20 @@ import signal
 import sys
 import zmq
 import os
-from messages_pb2 import storedata_request
+from messages_pb2 import storedata_request, get_data_request, getdata_response
 import messages_pb2
 
 context = zmq.Context()
-socket = context.socket(zmq.PULL)
+receiver = context.socket(zmq.PULL)
+sender = context.socket(zmq.PUSH)
 node_id = None
+data_folder = os.path.join('data', str(node_id))
 
 # Setup signal handler
 def signal_handler(sig, frame):
     print(f'Shutting down node {node_id}...')
     # Close sockets and terminate ZMQ context
-    socket.close()
+    receiver.close()
     context.term()
     sys.exit(0)
 
@@ -29,9 +31,7 @@ def redirect_output(log_file_path):
 def start_data_node(node_id, port, log_file_path):
     redirect_output(log_file_path)
     
-    socket.bind(f"tcp://*:{port}")
-
-    sender = context.socket(zmq.PUSH)
+    receiver.bind(f"tcp://*:{port}")
     sender.connect("tcp://localhost:5553")
 
     subscriber = context.socket(zmq.SUB)
@@ -41,49 +41,64 @@ def start_data_node(node_id, port, log_file_path):
     print(f"Data node {node_id} started on port {port}")
 
     poller = zmq.Poller()
-    poller.register(socket, zmq.POLLIN)
+    poller.register(receiver, zmq.POLLIN)
     poller.register(subscriber, zmq.POLLIN)
+
+
     while True:
         try:
         # Poll all sockets
             socks = dict(poller.poll())
         except KeyboardInterrupt:
             break
+
         # At this point one or multiple sockets have received a message
-        if socket in socks:
-            message = socket.recv()
-            
-            # Parse protobuf message
-            request = storedata_request()
-            request.ParseFromString(message)
-            file_name = request.filename
+        if receiver in socks:
+            storedata_message = receiver.recv_multipart()
+            handle_storedata_request(storedata_message)
 
-            # Ensure directory exists
-            os.makedirs(os.path.join('data', str(node_id)), exist_ok=True)
-
-            # Save file content as bin and send back name of bin file
-            file_path = os.path.join('data', str(node_id), file_name)
-            
-            with open(file_path, "wb") as file:
-                file.write(message)
-            
-            print(f"Data node {node_id} received: {message}")
         if subscriber in socks:
-            request = messages_pb2.storedata_request()
-            request.ParseFromString(subscriber.recv())
-            print(f"Data chunk request: {request.filename}")
-            response = messages_pb2.getdata_response()
-            response.filename = request.filename
-            with open(request.filename, "rb") as file:
-                print(f"Found chunk {file}, sending it back")
-                response.data = file.read()
-            # response.data = b"test123"
+            getdata_message = subscriber.recv_multipart()
+            handle_getdata_request(getdata_message)
+
+def handle_storedata_request(message):
+    # Parse protobuf message
+    request = storedata_request()
+    request.ParseFromString(message)
+    file_name = request.filename
+    file_data = request.filedata
+
+    # Ensure directory exists
+    os.makedirs(os.path.join('data', str(node_id)), exist_ok=True)
+
+    # Save file content and send back name of bin file
+    file_path = os.path.join(data_folder, file_name)
+    with open(file_path, "wb") as file:
+        file.write(file_data)
+    print(f"Saved {file_name} to {file_path}")
+
+def handle_getdata_request(message):
+    # Parse protobuf message
+    request = get_data_request()
+    request.ParseFromString(message)
+    file_name = request.filename
+    print(f"Data chunk request: {file_name}")
+
+    response = messages_pb2.getdata_response()
+    response.filename = file_name
+
+    # Try to load the requested file from the local file system,
+    # send response only if found
+    try:
+        file_path = os.path.join(data_folder, file_name)
+        with open(file_path, "rb") as in_file:
+            print(f"Found chunk {file_name}, sending it back")
+            response.filedata = in_file.read()
             sender.send(response.SerializeToString())
-
-
-def save_data_to_folder(data):
-    pass
-
+    except FileNotFoundError:
+        # The chunk is not stored by this node
+        print(f"Did not find chunk {file_name}")
+        pass
 
 if __name__ == "__main__":
     node_id = sys.argv[1]

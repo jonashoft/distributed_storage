@@ -11,12 +11,41 @@ import threading
 
 app = Flask(__name__)
 context = zmq.Context()
+heartbeats = {}  # Dictionary to store heartbeat timestamps
+
+def heartbeat_monitor():
+    """Background thread function for monitoring heartbeats."""
+    heartbeat_socket = context.socket(zmq.PULL)
+    heartbeat_socket.bind("tcp://*:5556")
+
+    while True:
+        serialized_message = heartbeat_socket.recv()
+        heartbeat = messages_pb2.heartbeat()
+        heartbeat.ParseFromString(serialized_message)
+        
+        # Update the heartbeat dictionary
+        print(f"Received heartbeat from node {heartbeat.node_id}")
+        heartbeats[heartbeat.node_id] = heartbeat.timestamp
+
+def check_heartbeats():
+    """Regularly check for lost nodes."""
+    heartbeat_interval = 5  # seconds
+    heartbeat_tolerance = heartbeat_interval * 3
+
+    while True:
+        current_time = time.time()
+        for node_id, last_heartbeat in list(heartbeats.items()):
+            if current_time - last_heartbeat > heartbeat_tolerance:
+                print(f"Node {node_id} is considered lost")
+                del heartbeats[node_id]
+        time.sleep(heartbeat_interval)
+
 
 # Replication factor
 k = 3
 
 # Number of nodes
-N = 20
+N = 10
 
 # Function to create and connect sockets
 def create_sockets(context, base_port, number_of_nodes):
@@ -29,7 +58,7 @@ def create_sockets(context, base_port, number_of_nodes):
     return sockets
 
 # Creating and connecting sockets for each data node
-base_port = 5556
+base_port = 5557
 sockets = create_sockets(context, base_port, N)
 
 # Socket to receive messages from Storage Nodes
@@ -212,41 +241,11 @@ def send_test_data(node_id, test_data, filename="testfile.bin"):
 def generate_dummy_data(size=1024):
     return os.urandom(size)  # Generates random binary data
 
-# Start the Flask app (must be after the endpoint functions) 
-host_local_computer = "localhost" # Listen for connections on the local computer
-host_local_network = "0.0.0.0" # Listen for connections on the local network
-app.run(host=host_local_computer, port=5555)
 
-# Heartbeat monitoring
-heartbeats = {}
-heartbeat_interval = 5  # Same as in the data node
-heartbeat_tolerance = heartbeat_interval * 3  # Tolerance for considering a node as lost
+if __name__ == '__main__':
+    # Start heartbeat monitoring in a separate thread
+    threading.Thread(target=heartbeat_monitor, daemon=True).start()
+    threading.Thread(target=check_heartbeats, daemon=True).start()
 
-# Thread to receive heartbeats
-def receive_heartbeats():
-    heartbeat_socket = context.socket(zmq.PULL)
-    heartbeat_socket.bind("tcp://*:5555")  # Bind to the same port as in the data node
-    while True:
-        message = heartbeat_socket.recv_string()
-        node_id = message.split()[-1]
-        heartbeats[node_id] = time.time()
-
-# Thread to check heartbeats
-def check_heartbeats():
-    while True:
-        current_time = time.time()
-        for node_id, last_heartbeat in list(heartbeats.items()):
-            if current_time - last_heartbeat > heartbeat_tolerance:
-                print(f"Node {node_id} is considered lost")
-                # Here you can add logic to handle lost nodes
-                del heartbeats[node_id]
-        time.sleep(heartbeat_interval)
-
-# Start the heartbeat threads
-heartbeat_receiver_thread = threading.Thread(target=receive_heartbeats)
-heartbeat_receiver_thread.daemon = True
-heartbeat_receiver_thread.start()
-
-heartbeat_checker_thread = threading.Thread(target=check_heartbeats)
-heartbeat_checker_thread.daemon = True
-heartbeat_checker_thread.start()
+    # Run Flask app
+    app.run(host="localhost", port=5555)

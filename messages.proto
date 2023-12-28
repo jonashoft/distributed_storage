@@ -16,3 +16,9 @@ message getdata_response
     string filename = 1;
     bytes filedata = 2;
 }
+
+message heartbeat
+{
+    string node_id = 1;
+    double timestamp = 2;
+}

@@ -2,7 +2,7 @@ import signal
 import sys
 import zmq
 import os
-from messages_pb2 import storedata_request, get_data_request, getdata_response
+from messages_pb2 import storedata_request, getdata_request, getdata_response, heartbeat
 import messages_pb2
 import time
 import threading
@@ -10,6 +10,8 @@ import threading
 context = zmq.Context()
 receiver = context.socket(zmq.PULL)
 sender = context.socket(zmq.PUSH)
+heartbeat_socket = context.socket(zmq.PUSH)
+
 node_id = None
 data_folder = os.path.join('data', str(node_id))
 
@@ -42,10 +44,14 @@ def start_data_node(node_id, port, log_file_path):
 
     print(f"Data node {node_id} started on port {port}")
 
+    # Start heartbeat thread
+    heartbeat_thread = threading.Thread(target=send_heartbeat, args=(node_id,))
+    heartbeat_thread.daemon = True
+    heartbeat_thread.start()
+
     poller = zmq.Poller()
     poller.register(receiver, zmq.POLLIN)
     poller.register(subscriber, zmq.POLLIN)
-
 
     while True:
         try:
@@ -81,7 +87,7 @@ def handle_storedata_request(message):
 
 def handle_getdata_request(message):
     # Parse protobuf message
-    request = get_data_request()
+    request = getdata_request()
     request.ParseFromString(message)
     file_name = request.filename
     print(f"Data chunk request: {file_name}")
@@ -103,21 +109,20 @@ def handle_getdata_request(message):
         pass
 
 def send_heartbeat(node_id, interval=5):
-    heartbeat_socket = context.socket(zmq.PUSH)
-    heartbeat_socket.connect("tcp://localhost:5555")  # Connect to the lead node heartbeat port
+    heartbeat_socket.connect("tcp://localhost:5556")  # Specify the correct address and port
+
     while True:
-        heartbeat_socket.send_string(f"Heartbeat from node {node_id}")
+        heartbeat_message = heartbeat()
+        heartbeat_message.node_id = node_id
+        heartbeat_message.timestamp = time.time()
+        print(f"Sending heartbeat from node {node_id} at time {heartbeat_message.timestamp}")
+        heartbeat_socket.send(heartbeat_message.SerializeToString())
         time.sleep(interval)
 
 if __name__ == "__main__":
     node_id = sys.argv[1]
     port = sys.argv[2]
     log_file_path = sys.argv[3]
-
-    # Start the heartbeat thread
-    heartbeat_thread = threading.Thread(target=send_heartbeat, args=(node_id,))
-    heartbeat_thread.daemon = True
-    heartbeat_thread.start()
 
     start_data_node(node_id, port, log_file_path)
 

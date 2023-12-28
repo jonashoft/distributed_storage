@@ -4,6 +4,8 @@ import zmq
 import os
 from messages_pb2 import storedata_request, get_data_request, getdata_response
 import messages_pb2
+import time
+import threading
 
 context = zmq.Context()
 receiver = context.socket(zmq.PULL)
@@ -100,10 +102,23 @@ def handle_getdata_request(message):
         print(f"Did not find chunk {file_name}")
         pass
 
+def send_heartbeat(node_id, interval=5):
+    heartbeat_socket = context.socket(zmq.PUSH)
+    heartbeat_socket.connect("tcp://localhost:5555")  # Connect to the lead node heartbeat port
+    while True:
+        heartbeat_socket.send_string(f"Heartbeat from node {node_id}")
+        time.sleep(interval)
+
 if __name__ == "__main__":
     node_id = sys.argv[1]
     port = sys.argv[2]
     log_file_path = sys.argv[3]
+
+    # Start the heartbeat thread
+    heartbeat_thread = threading.Thread(target=send_heartbeat, args=(node_id,))
+    heartbeat_thread.daemon = True
+    heartbeat_thread.start()
+
     start_data_node(node_id, port, log_file_path)
 
 

@@ -13,7 +13,7 @@ sender = context.socket(zmq.PUSH)
 heartbeat_socket = context.socket(zmq.PUSH)
 
 node_id = None
-data_folder = os.path.join('data', str(node_id))
+data_folder = os.path.join('data')
 
 # Setup signal handler
 def signal_handler(sig, frame):
@@ -62,7 +62,7 @@ def start_data_node(node_id, port, log_file_path):
 
         # At this point one or multiple sockets have received a message
         if receiver in socks:
-            storedata_message = receiver.recv_multipart()
+            storedata_message = receiver.recv()
             handle_storedata_request(storedata_message)
 
         if subscriber in socks:
@@ -78,9 +78,10 @@ def handle_storedata_request(message):
 
     # Ensure directory exists
     os.makedirs(os.path.join('data', str(node_id)), exist_ok=True)
-
+    print(data_folder)
+    print(file_name)
     # Save file content and send back name of bin file
-    file_path = os.path.join(data_folder, file_name)
+    file_path = os.path.join(data_folder, str(node_id), file_name)
     with open(file_path, "wb") as file:
         file.write(file_data)
     print(f"Saved {file_name} to {file_path}")

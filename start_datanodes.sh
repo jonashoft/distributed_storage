@@ -14,7 +14,7 @@ for (( i=0; i<$NUMBER_OF_NODES; i++ ))
 do
     PORT=$(($BASE_PORT + $i))
     LOG_FILE="$LOG_DIR/datanode_$i.log"
-    python datanode.py $i $PORT $LOG_FILE &
+    python3 datanode.py $i $PORT $LOG_FILE &
     echo $! >> $PID_FILE
     echo "Started data node $i on port $PORT with PID $!, logging to $LOG_FILE"
 done

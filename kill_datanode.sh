@@ -13,19 +13,39 @@ if [ ! -f "$PID_FILE" ]; then
 fi
 
 # Read PIDs into an array
-mapfile -t PIDS < $PID_FILE
+PIDS=()
+while read -r line; do
+    PIDS+=("$line")
+done < "$PID_FILE"
 
-# Shuffle the array and select the first NUM_NODES_TO_STOP PIDs to terminate
-# This can be changed to select the last NUM_NODES_TO_STOP PIDs instead
-shuf -n $NUM_NODES_TO_STOP -e "${PIDS[@]}" | while read PID; do
-    if kill -0 $PID > /dev/null 2>&1; then
+# Function to shuffle an array
+shuffle() {
+    local i tmp size max rand
+    size=${#PIDS[*]}
+    max=$(( 32768 / size * size ))
+
+    for ((i=size-1; i>0; i--)); do
+        while (( (rand=RANDOM) >= max )); do :; done
+        rand=$(( rand % (i+1) ))
+        tmp=${PIDS[i]} PIDS[i]=${PIDS[rand]} PIDS[rand]=$tmp
+    done
+}
+
+# Shuffle the array
+shuffle
+
+# Select the first NUM_NODES_TO_STOP PIDs to terminate
+for ((i=0; i<NUM_NODES_TO_STOP; i++)); do
+    PID=${PIDS[i]}
+    if kill -0 "$PID" > /dev/null 2>&1; then
         echo "Stopping node with PID $PID"
-        kill $PID
+        kill "$PID"
     else
         echo "Node with PID $PID not found"
     fi
 done
 
 # Update the PID file
-# This step is optional and depends on whether you want to maintain the PID file after stopping nodes
-grep -vFf <(printf "%s\n" "${PIDS[@]:0:$NUM_NODES_TO_STOP}") $PID_FILE > temp && mv temp $PID_FILE
+for ((i=0; i<NUM_NODES_TO_STOP; i++)); do
+    grep -v "^${PIDS[i]}$" "$PID_FILE" > temp && mv temp "$PID_FILE"
+done

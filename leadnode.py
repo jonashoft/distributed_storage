@@ -199,9 +199,11 @@ def random_placement(fragments, filesize, filename):
     )
     db.commit()
     fileId = cursor.lastrowid
+    fragmentNumber = 0
 
     # Send each fragment to k number of nodes
     for fragment in fragments:
+        fragmentNumber += 1
         fragmentName = random_string()
         # Send the fragment to k number of nodes
         for i in range(k):
@@ -210,7 +212,7 @@ def random_placement(fragments, filesize, filename):
             print(f"Sending fragment to node {node}: {fragment}")
             # Send the fragment to the node using the appropriate method
             
-            send_data(node, fragment, fileId, fragmentName+".bin")  # Send to the first data node for testing
+            send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")  # Send to the first data node for testing
 
 
 
@@ -240,15 +242,18 @@ def min_copysets_placement(fragments, filesize, filename):
     )
     db.commit()
     fileId = cursor.lastrowid
-
+    fragmentNumber = 0
+    
     # Send all fragments to each node in random_group
     for node in random_group:
         # Send each fragment to each node in the selected replication group
         for fragment in fragments:
+            fragmentNumber += 1
             fragmentName = random_string()
-            send_data(node, fragment, fileId, fragmentName+".bin")
+            send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")
             # Assuming the node index corresponds to the socket index
             print(f"Sending fragment to node {node}: {fragment}")
+        fragmentNumber = 0
             
 
 def buddy_approach(fragments, numberOfGroups, filesize, filename):
@@ -277,9 +282,11 @@ def buddy_approach(fragments, numberOfGroups, filesize, filename):
     )
     db.commit()
     fileId = cursor.lastrowid
+    fragmentNumber = 0
 
     # Send each fragment to k number of nodes in the selected group
     for fragment in fragments:
+        fragmentNumber += 1
         selected_group = random_group.copy()
         fragmentName = random_string()
         # Send the fragment to k number of nodes in the selected group
@@ -287,12 +294,12 @@ def buddy_approach(fragments, numberOfGroups, filesize, filename):
             # Select the next node from the list of nodes in the selected group
             node = random.choice(selected_group)
             selected_group.remove(node)
-            send_data(node, fragment, fileId, fragmentName+".bin")
+            send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")
             print(f"Sending fragment to node {node}: {fragment}")
             # Send the fragment to the node using the appropriate method
 
 
-def send_data(node_id, filedata, fileId, filename="testfile.bin"):
+def send_data(node_id, filedata, fileId, fragmentNumber, filename="testfile.bin"):
     # Create a Protobuf message
     request = messages_pb2.storedata_request()
     request.filename = filename
@@ -303,8 +310,8 @@ def send_data(node_id, filedata, fileId, filename="testfile.bin"):
 
     db = get_db()
     db.execute(
-        "INSERT INTO `Fragments`(`FileID`, `FragmentName`, `NodeIDs`) VALUES (?,?,?)",
-        (fileId, filename, node_id)
+        "INSERT INTO `Fragments`(`FileID`, `FragmentName`, `FragmentNumber`, `NodeIDs`) VALUES (?,?,?,?)",
+        (fileId, filename, fragmentNumber, node_id)
     )
     db.commit()
 

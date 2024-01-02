@@ -1,6 +1,6 @@
 import sqlite3
 import string
-from flask import Flask, make_response,  g, request
+from flask import Flask, make_response,  g, request, jsonify
 import random
 import base64
 import zmq
@@ -30,6 +30,15 @@ def close_db(e=None):
     if db is not None:
         db.close()
 
+def clear_database():
+    db = get_db()
+    try:
+        db.execute("DELETE FROM Fragments")
+        db.execute("DELETE FROM Files")
+        db.commit()
+    finally:
+        db.close()
+
 def random_string(length=8):
     """
     Returns a random alphanumeric string of the given length. 
@@ -40,9 +49,13 @@ def random_string(length=8):
     """
     return ''.join([random.SystemRandom().choice(string.ascii_letters + string.digits) for n in range(length)])
 
+
+
 app = Flask(__name__)
 context = zmq.Context()
 heartbeats = {}  # Dictionary to store heartbeat timestamps
+lost_nodes = []  # List of lost nodes
+lock = threading.Lock() # Lock for shared resources
 app.teardown_appcontext(close_db)
 
 def heartbeat_monitor():
@@ -54,10 +67,13 @@ def heartbeat_monitor():
         serialized_message = heartbeat_socket.recv()
         heartbeat = messages_pb2.heartbeat()
         heartbeat.ParseFromString(serialized_message)
-        
-        # Update the heartbeat dictionary
-        print(f"Received heartbeat from node {heartbeat.node_id}")
-        heartbeats[heartbeat.node_id] = heartbeat.timestamp
+
+        with lock:  # Acquire lock before modifying shared resources
+            print(f"Received heartbeat from node {heartbeat.node_id}")
+            heartbeats[heartbeat.node_id] = heartbeat.timestamp
+            # Remove node from lost_nodes list if it's back online
+            if heartbeat.node_id in lost_nodes:
+                lost_nodes.remove(heartbeat.node_id)
 
 def check_heartbeats():
     """Regularly check for lost nodes."""
@@ -66,12 +82,50 @@ def check_heartbeats():
 
     while True:
         current_time = time.time()
-        for node_id, last_heartbeat in list(heartbeats.items()):
-            if current_time - last_heartbeat > heartbeat_tolerance:
-                print(f"Node {node_id} is considered lost")
-                del heartbeats[node_id]
+        with lock:  # Acquire lock before accessing shared resources
+            for node_id, last_heartbeat in list(heartbeats.items()):
+                if current_time - last_heartbeat > heartbeat_tolerance:
+                    print(f"Node {node_id} is considered lost")
+                    if node_id not in lost_nodes:
+                        lost_nodes.append(node_id)
+                    # Remove the node from the heartbeats dictionary
+                    del heartbeats[node_id]
         time.sleep(heartbeat_interval)
 
+def calculate_lost_files():
+    db = get_db()
+    total_files = db.execute("SELECT COUNT(*) FROM `Files`").fetchone()[0]
+    if total_files == 0:
+        return "No files in the system."
+
+    # Fetch all fragment-node mappings for each file
+    fragment_mappings = db.execute("SELECT `FileID`, `FragmentNumber`, `NodeIDs` FROM `Fragments`").fetchall()
+
+    # Dynamically organize fragments by file based on actual FileIDs
+    file_fragment_availability = {}
+    for mapping in fragment_mappings:
+        file_id, fragment_number, node_id = mapping
+        if file_id not in file_fragment_availability:
+            file_fragment_availability[file_id] = {str(i): False for i in range(1, 5)}
+        if node_id not in lost_nodes:
+            file_fragment_availability[file_id][fragment_number] = True
+
+    # Check for lost files
+    lost_files_count = sum(not all(fragments.values()) for fragments in file_fragment_availability.values())
+
+    # Calculate the fraction of lost files
+    fraction_lost = lost_files_count / total_files if total_files > 0 else 0
+    return f"Fraction of Lost Files: {fraction_lost:.2%}"
+
+
+@app.route('/lost_files_fraction', methods=['GET'])
+def get_lost_files_fraction():
+    try:
+        lost_files_fraction = calculate_lost_files()
+        return jsonify({"fraction_of_lost_files": lost_files_fraction}), 200
+    except Exception as e:
+        # Handling any exceptions that might occur
+        return jsonify({"error": str(e)}), 500
 
 # Replication factor
 k = 3
@@ -333,6 +387,11 @@ def generate_dummy_data(size=1024):
     return os.urandom(size)  # Generates random binary data
 
 if __name__ == '__main__':
+    # Create an application context
+    with app.app_context():
+        # Wipe the database clean
+        clear_database()
+
     # Start heartbeat monitoring in a separate thread
     threading.Thread(target=heartbeat_monitor, daemon=True).start()
     threading.Thread(target=check_heartbeats, daemon=True).start()

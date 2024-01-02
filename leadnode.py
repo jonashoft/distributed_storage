@@ -106,15 +106,33 @@ time.sleep(1)
 @app.route('/files/<string:filename>',  methods=['GET'])
 def download_file(filename):
     print(f"Downloading file {filename}")
-    request = messages_pb2.getdata_request()
-    request.filename = filename
 
-    data_req_socket.send(request.SerializeToString())
+    db = get_db()
+    cursor = db.execute("SELECT * FROM `Files` WHERE `Filename`=?", [filename])
+    if not cursor: 
+        return make_response({"message": "Error connecting to the database"}, 500)
+    
+    file = cursor.fetchone()
+    if not file:
+        return make_response({"message": f"File {filename} not found"}, 404)
+    
+    f = dict(file)
+    db = get_db()
+    cursor = db.execute("SELECT * FROM `Fragments` WHERE `FileID`=?", [f['FileID']])
+    fragments = cursor.fetchall()
+    fragmentFiles = []
 
-    for _ in range(4):
+    for fragment in fragments:
+        f = dict(fragment)
+        request = messages_pb2.getdata_request()
+        request.filename = f['FragmentName']
+
+        data_req_socket.send(request.SerializeToString())
+        
         response = messages_pb2.getdata_response()
         response.ParseFromString(response_socket.recv())
-        print(f"Received: {response.data} from file: {response.filename}")
+        print(f"Received: file: {response.filename}")
+        fragmentFiles.append(response.filedata)
     return make_response({'message': 'File downloaded successfully'}, 200)
 
 # Endpoint for uploading files
@@ -127,11 +145,6 @@ def add_files():
     file_data = file.read()
     if file_data is None:
         return make_response({'message': 'Missing file parameters'}, 400)
-    
-    # db = get_db()
-    # cursor = db.execute("SELECT * FROM `Files` WHERE `Filename`=?", [file.filename])
-    # if cursor.fetchone() is not None:
-    #     return make_response({'message': 'File already exists'}, 400)
 
     # Extract the strategy parameter from the request
     strategy = request.form.get('strategy')
@@ -142,9 +155,6 @@ def add_files():
     valid_strategies = ['random', 'min_copysets', 'buddy']
     if strategy not in valid_strategies:
         return make_response({'message': 'Invalid strategy parameter'}, 400)
-
-    # Test data
-    # file_data = "abcdefghijklmnopqrstuvwxyz"
 
     # Split file into 4 equal sized fragments
     file_size = len(file_data)
@@ -157,7 +167,6 @@ def add_files():
         fragments.append(file_data[i:i+fragment_size])
 
     # Generate k full replicas on N different nodes
-
 
     numberOfGroups = 6 # Number of groups to split the nodes into for buddy approach
 
@@ -243,7 +252,7 @@ def min_copysets_placement(fragments, filesize, filename):
     db.commit()
     fileId = cursor.lastrowid
     fragmentNumber = 0
-    
+
     # Send all fragments to each node in random_group
     for node in random_group:
         # Send each fragment to each node in the selected replication group

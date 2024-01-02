@@ -66,7 +66,7 @@ def start_data_node(node_id, port, log_file_path):
             handle_storedata_request(storedata_message)
 
         if subscriber in socks:
-            getdata_message = subscriber.recv_multipart()
+            getdata_message = subscriber.recv()
             handle_getdata_request(getdata_message)
 
 def handle_storedata_request(message):
@@ -99,7 +99,8 @@ def handle_getdata_request(message):
     # Try to load the requested file from the local file system,
     # send response only if found
     try:
-        file_path = os.path.join(data_folder, file_name)
+        file_path = os.path.join(data_folder, str(node_id), file_name)
+        print(file_path)
         with open(file_path, "rb") as in_file:
             print(f"Found chunk {file_name}, sending it back")
             response.filedata = in_file.read()

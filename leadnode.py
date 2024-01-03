@@ -10,6 +10,8 @@ import os
 import messages_pb2
 import time
 import threading
+import sys
+
 
 """
 Utility Functions
@@ -58,6 +60,9 @@ lost_nodes = []  # List of lost nodes
 lock = threading.Lock() # Lock for shared resources
 app.teardown_appcontext(close_db)
 
+k = 3
+N = 12
+
 def heartbeat_monitor():
     """Background thread function for monitoring heartbeats."""
     heartbeat_socket = context.socket(zmq.PULL)
@@ -67,6 +72,7 @@ def heartbeat_monitor():
         serialized_message = heartbeat_socket.recv()
         heartbeat = messages_pb2.heartbeat()
         heartbeat.ParseFromString(serialized_message)
+        print(f"Received heartbeat from node {heartbeat.node_id}")
 
         with lock:  # Acquire lock before modifying shared resources
             heartbeats[heartbeat.node_id] = heartbeat.timestamp
@@ -126,11 +132,7 @@ def get_lost_files_fraction():
         # Handling any exceptions that might occur
         return jsonify({"error": str(e)}), 500
 
-# Replication factor
-k = 3
 
-# Number of nodes
-N = 20
 
 # Function to create and connect sockets
 def create_sockets(context, base_port, number_of_nodes):
@@ -219,9 +221,6 @@ def add_files():
     for i in range(0, file_size, fragment_size):
         fragments.append(file_data[i:i+fragment_size])
 
-    # Generate k full replicas on N different nodes
-
-    numberOfGroups = 6 # Number of groups to split the nodes into for buddy approach
 
     # Print fragments
     print(f"Fragments: {fragments}")
@@ -239,7 +238,7 @@ def add_files():
     elif strategy == 'min_copysets':
         storageFailed = min_copysets_placement(fragments, file_size, file.filename)
     elif strategy == 'buddy':
-        storageFailed = buddy_approach(fragments, numberOfGroups, file_size, file.filename)
+        storageFailed = buddy_approach(fragments, file_size, file.filename)
 
     if storageFailed:
         return make_response({'message': 'Storage failed'}, 500)
@@ -318,13 +317,22 @@ def min_copysets_placement(fragments, filesize, filename):
         fragmentNumber = 0
             
 
-def buddy_approach(fragments, numberOfGroups, filesize, filename):
+def buddy_approach(fragments, filesize, filename):
+
+    # Generate k full replicas on N different nodes
+    # Calculate numberOfGroups based on N and k
+    numberOfGroups = max(1, N // k) # For buddy 
+
+
     # Create a list of node IDs
     nodes = list(range(N))
     random.shuffle(nodes)
     print(f"Nodes: {nodes}")
 
     numberOfNodesPerGroup = int(N / numberOfGroups)
+    if numberOfNodesPerGroup < k:
+        print("Not enough nodes in each group to satisfy the replication factor")
+        return True  # Indicates a failure in storage
 
     # Create a list of groups
     listOfGroups = [nodes[i:i+numberOfNodesPerGroup] for i in range(0, N, numberOfNodesPerGroup)]
@@ -386,6 +394,15 @@ def generate_dummy_data(size=1024):
     return os.urandom(size)  # Generates random binary data
 
 if __name__ == '__main__':
+    # Default values for k and N
+    k = 3  # Replication factor
+    N = 12  # Number of nodes
+    
+    # Check if command-line arguments are provided
+    if len(sys.argv) >= 3:
+        k = int(sys.argv[1])
+        N = int(sys.argv[2])
+
     # Create an application context
     with app.app_context():
         # Wipe the database clean

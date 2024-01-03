@@ -69,7 +69,6 @@ def heartbeat_monitor():
         heartbeat.ParseFromString(serialized_message)
 
         with lock:  # Acquire lock before modifying shared resources
-            print(f"Received heartbeat from node {heartbeat.node_id}")
             heartbeats[heartbeat.node_id] = heartbeat.timestamp
             # Remove node from lost_nodes list if it's back online
             if heartbeat.node_id in lost_nodes:
@@ -77,7 +76,7 @@ def heartbeat_monitor():
 
 def check_heartbeats():
     """Regularly check for lost nodes."""
-    heartbeat_interval = 5  # seconds
+    heartbeat_interval = 1  # seconds
     heartbeat_tolerance = heartbeat_interval * 3
 
     while True:

@@ -110,7 +110,7 @@ def handle_getdata_request(message):
         print(f"Did not find chunk {file_name}")
         pass
 
-def send_heartbeat(node_id, interval=5):
+def send_heartbeat(node_id, interval=1):
     heartbeat_socket.connect("tcp://localhost:5556")  # Specify the correct address and port
 
     while True:

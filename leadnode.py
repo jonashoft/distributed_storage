@@ -239,11 +239,13 @@ def add_files():
         print("Not enough nodes to form separate copysets for all fragments")
         return
 
+
+    storageFailed = False
     # Call the appropriate function based on the strategy
     if strategy == 'random':
-        random_placement(fragments, file_size, file.filename)
+        storageFailed = random_placement(fragments, file_size, file.filename)
     elif strategy == 'min_copysets':
-        min_copysets_placement(fragments, file_size, file.filename)
+        storageFailed = min_copysets_placement(fragments, file_size, file.filename)
     elif strategy == 'buddy':
         storageFailed = buddy_approach(fragments, file_size, file.filename)
 

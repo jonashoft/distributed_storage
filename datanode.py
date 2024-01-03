@@ -63,10 +63,12 @@ def start_data_node(node_id, port, log_file_path):
         # At this point one or multiple sockets have received a message
         if receiver in socks:
             storedata_message = receiver.recv()
+            print("test receiver")
             handle_storedata_request(storedata_message)
 
         if subscriber in socks:
             getdata_message = subscriber.recv()
+            print("test subscriber")
             handle_getdata_request(getdata_message)
 
 def handle_storedata_request(message):
@@ -100,7 +102,6 @@ def handle_getdata_request(message):
     # send response only if found
     try:
         file_path = os.path.join(data_folder, str(node_id), file_name)
-        print(file_path)
         with open(file_path, "rb") as in_file:
             print(f"Found chunk {file_name}, sending it back")
             response.filedata = in_file.read()
@@ -110,7 +111,7 @@ def handle_getdata_request(message):
         print(f"Did not find chunk {file_name}")
         pass
 
-def send_heartbeat(node_id, interval=1):
+def send_heartbeat(node_id, interval=240):
     heartbeat_socket.connect("tcp://localhost:5556")  # Specify the correct address and port
 
     while True:

@@ -12,6 +12,7 @@ import time
 import threading
 import sys
 
+import re
 
 """
 Utility Functions
@@ -82,7 +83,7 @@ def heartbeat_monitor():
 
 def check_heartbeats():
     """Regularly check for lost nodes."""
-    heartbeat_interval = 1  # seconds
+    heartbeat_interval = 240  # seconds
     heartbeat_tolerance = heartbeat_interval * 3
 
     while True:
@@ -176,18 +177,25 @@ def download_file(filename):
     cursor = db.execute("SELECT * FROM `Fragments` WHERE `FileID`=?", [f['FileID']])
     fragments = cursor.fetchall()
     fragmentFiles = []
+    receivedFragmentNames = []
 
     for fragment in fragments:
         f = dict(fragment)
-        request = messages_pb2.getdata_request()
-        request.filename = f['FragmentName']
+        if f['FragmentNumber'] not in receivedFragmentNames:
+            request = messages_pb2.getdata_request()
+            request.filename = f['FragmentName']
 
-        data_req_socket.send(request.SerializeToString())
-        
-        response = messages_pb2.getdata_response()
-        response.ParseFromString(response_socket.recv())
-        print(f"Received: file: {response.filename}")
-        fragmentFiles.append(response.filedata)
+            print(f"Sending request for file: {request.SerializeToString()}")
+            data_req_socket.send(request.SerializeToString())
+
+            for _ in range(0,k):
+                response = messages_pb2.getdata_response()
+                response.ParseFromString(response_socket.recv())
+                print(f"Received: file: {response.filename}")
+                fragmentFiles.append(response)
+            receivedFragmentNames.append(f['FragmentNumber'])
+
+    print(f"Received: {len(fragmentFiles)} fragments")
     return make_response({'message': 'File downloaded successfully'}, 200)
 
 # Endpoint for uploading files
@@ -223,7 +231,7 @@ def add_files():
 
 
     # Print fragments
-    print(f"Fragments: {fragments}")
+    # print(f"Fragments: {fragments}")
     print(f"k: {k} \nN: {N}")
 
     # Ensure there are enough nodes to form at least one copyset
@@ -232,11 +240,10 @@ def add_files():
         return
 
     # Call the appropriate function based on the strategy
-    storageFailed = False
     if strategy == 'random':
-        storageFailed = random_placement(fragments, file_size, file.filename)
+        random_placement(fragments, file_size, file.filename)
     elif strategy == 'min_copysets':
-        storageFailed = min_copysets_placement(fragments, file_size, file.filename)
+        min_copysets_placement(fragments, file_size, file.filename)
     elif strategy == 'buddy':
         storageFailed = buddy_approach(fragments, file_size, file.filename)
 
@@ -265,17 +272,14 @@ def random_placement(fragments, filesize, filename):
     # Send each fragment to k number of nodes
     for fragment in fragments:
         fragmentNumber += 1
-        fragmentName = random_string()
+        fragmentName = random_string() + f'_fragment{fragmentNumber}'
         # Send the fragment to k number of nodes
         for i in range(k):
             # Select the next node from the list of replication nodes
             node = replication_nodes.pop()
             print(f"Sending fragment to node {node}: {fragment}")
             # Send the fragment to the node using the appropriate method
-            
             send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")  # Send to the first data node for testing
-
-
 
 
 def min_copysets_placement(fragments, filesize, filename):
@@ -305,15 +309,17 @@ def min_copysets_placement(fragments, filesize, filename):
     fileId = cursor.lastrowid
     fragmentNumber = 0
 
+    random_fragment_names = [random_string() for _ in range(4)]
+
     # Send all fragments to each node in random_group
     for node in random_group:
         # Send each fragment to each node in the selected replication group
-        for fragment in fragments:
+        for i, fragment in enumerate(fragments):
             fragmentNumber += 1
-            fragmentName = random_string()
+            fragmentName = random_fragment_names[i] + f'_fragment{fragmentNumber}'
             send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")
             # Assuming the node index corresponds to the socket index
-            print(f"Sending fragment to node {node}: {fragment}")
+            print(f"Sending fragment: {fragmentNumber} to node {node}")
         fragmentNumber = 0
             
 
@@ -358,7 +364,7 @@ def buddy_approach(fragments, filesize, filename):
     for fragment in fragments:
         fragmentNumber += 1
         selected_group = random_group.copy()
-        fragmentName = random_string()
+        fragmentName = random_string() + f'_fragment{fragmentNumber}'
         # Send the fragment to k number of nodes in the selected group
         for _ in range(k):
             # Select the next node from the list of nodes in the selected group

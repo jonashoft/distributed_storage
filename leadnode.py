@@ -47,7 +47,7 @@ lock = threading.Lock() # Lock for shared resources
 app.teardown_appcontext(close_db)
 
 k = 3
-N = 12
+N = 20
 
 def heartbeat_monitor():
     """Background thread function for monitoring heartbeats."""
@@ -108,7 +108,6 @@ def calculate_lost_files():
     fraction_lost = lost_files_count / total_files if total_files > 0 else 0
     return f"Fraction of Lost Files: {fraction_lost:.2%}"
 
-
 @app.route('/lost_files_fraction', methods=['GET'])
 def get_lost_files_fraction():
     try:
@@ -117,8 +116,6 @@ def get_lost_files_fraction():
     except Exception as e:
         # Handling any exceptions that might occur
         return jsonify({"error": str(e)}), 500
-
-
 
 # Function to create and connect sockets
 def create_sockets(context, base_port, number_of_nodes):
@@ -147,8 +144,21 @@ poller.register(response_socket, zmq.POLLIN)
 # Wait for all workers to start and connect.
 time.sleep(1)
 
+# Endpoint for requesting files via ID
+@app.route('/file_by_id/<int:id>',  methods=['GET'])
+def download_file_by_id(id):
+    db = get_db()
+    cursor = db.execute("SELECT * FROM `Files` WHERE `FileID`=?", [id])
+    if not cursor: 
+        return make_response({"message": "Error connecting to the database"}, 500)
+    
+    file = cursor.fetchone()
+    if not file:
+        return make_response({"message": f"File with ID: {id} not found"}, 404)
+    return download_file(dict(file)['Filename'])
+
 # Endpoint for requesting files
-@app.route('/files/<string:filename>',  methods=['GET'])
+@app.route('/file/<string:filename>',  methods=['GET'])
 def download_file(filename):
     start_time = time.time()
     print(f"Downloading file {filename}")
@@ -268,29 +278,25 @@ def add_files():
     for i in range(0, file_size, fragment_size):
         fragments.append(file_data[i:i+fragment_size])
 
-
-    # Print fragments
-    # print(f"Fragments: {fragments}")
-    print(f"k: {k} \nN: {N}")
-
     # Ensure there are enough nodes to form at least one copyset
     if N < k * len(fragments):
         print("Not enough nodes to form separate copysets for all fragments")
         return
 
-
+    print(f"Distributing '{file.filename}' across {N} nodes using strategy '{strategy}'")
     storageFailed = False
+    fileId = 0
     # Call the appropriate function based on the strategy
     if strategy == 'random':
-        storageFailed = random_placement(fragments, file_size, file.filename)
+        storageFailed, fileId = random_placement(fragments, file_size, file.filename)
     elif strategy == 'min_copysets':
-        storageFailed = min_copysets_placement(fragments, file_size, file.filename)
+        storageFailed, fileId = min_copysets_placement(fragments, file_size, file.filename)
     elif strategy == 'buddy':
-        storageFailed = buddy_approach(fragments, file_size, file.filename)
+        storageFailed, fileId = buddy_approach(fragments, file_size, file.filename)
 
     if storageFailed:
         return make_response({'message': 'Storage failed'}, 500)
-    return make_response({'message': 'File uploaded successfully'}, 201)
+    return make_response({'message': f'File uploaded successfully with Id: {fileId}'}, 201)
 #
    
 def random_placement(fragments, filesize, filename):
@@ -317,8 +323,6 @@ def random_placement(fragments, filesize, filename):
         for i in range(k):
             # Select the next node from the list of replication nodes
             node = replication_nodes.pop()
-            print(f"Sending fragment to node {node}: {fragment}")
-            # Send the fragment to the node using the appropriate method
             send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")  # Send to the first data node for testing
 
 
@@ -357,33 +361,28 @@ def min_copysets_placement(fragments, filesize, filename):
             fragmentNumber += 1
             fragmentName = random_fragment_names[i] + f'_fragment{fragmentNumber}'
             send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")
-            # Assuming the node index corresponds to the socket index
-            print(f"Sending fragment: {fragmentNumber} to node {node}")
         fragmentNumber = 0
+    return False, fileId
             
 
 def buddy_approach(fragments, filesize, filename):
-
     # Generate k full replicas on N different nodes
     # Calculate numberOfGroups based on N and k
     numberOfGroups = max(1, N // k) # For buddy 
 
-
     # Create a list of node IDs
     nodes = list(range(N))
     random.shuffle(nodes)
-    print(f"Nodes: {nodes}")
 
     numberOfNodesPerGroup = int(N / numberOfGroups)
     if numberOfNodesPerGroup < k:
         print("Not enough nodes in each group to satisfy the replication factor")
-        return True  # Indicates a failure in storage
+        return True, fileId  # Indicates a failure in storage
 
     # Create a list of groups
     listOfGroups = [nodes[i:i+numberOfNodesPerGroup] for i in range(0, N, numberOfNodesPerGroup)]
     while len(listOfGroups) > numberOfGroups:
         listOfGroups.pop()  # Remove the last element
-    print(f"List of Groups: {listOfGroups}")
 
     # Pick a random group of nodes from listOfGroups
     random_group = random.choice(listOfGroups)
@@ -409,8 +408,7 @@ def buddy_approach(fragments, filesize, filename):
             node = random.choice(selected_group)
             selected_group.remove(node)
             send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")
-            print(f"Sending fragment {fragmentNumber} to node {node}")
-            # Send the fragment to the node using the appropriate method
+    return False, fileId
 
 
 def send_data(node_id, filedata, fileId, fragmentNumber, filename="testfile.bin"):
@@ -431,16 +429,12 @@ def send_data(node_id, filedata, fileId, fragmentNumber, filename="testfile.bin"
 
     # Send the serialized data
     sockets[node_id].send(serialized_request)
-    print(f"Sent data to node {node_id}")
-
-# Dummy data generation
-def generate_dummy_data(size=1024):
-    return os.urandom(size)  # Generates random binary data
 
 if __name__ == '__main__':
     # Default values for k and N
+
     k = 3  # Replication factor
-    N = 12  # Number of nodes
+    N = 20  # Number of nodes
     
     # Check if command-line arguments are provided
     if len(sys.argv) >= 3:

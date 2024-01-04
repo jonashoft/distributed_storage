@@ -2,7 +2,6 @@ import sqlite3
 import string
 from flask import Flask, make_response,  g, request, jsonify
 import random
-import base64
 import zmq
 import time
 import math
@@ -19,17 +18,12 @@ Utility Functions
 """
 def get_db():
     if 'db' not in g:
-        g.db = sqlite3.connect(
-            'files.sqlite',
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
+        g.db = sqlite3.connect( 'files.sqlite', detect_types=sqlite3.PARSE_DECLTYPES )
         g.db.row_factory = sqlite3.Row
-
     return g.db
 
 def close_db(e=None):
     db = g.pop('db', None)
-
     if db is not None:
         db.close()
 
@@ -43,16 +37,7 @@ def clear_database():
         db.close()
 
 def random_string(length=8):
-    """
-    Returns a random alphanumeric string of the given length. 
-    Only lowercase ascii letters and numbers are used.
-
-    :param length: Length of the requested random string 
-    :return: The random generated string
-    """
     return ''.join([random.SystemRandom().choice(string.ascii_letters + string.digits) for n in range(length)])
-
-
 
 app = Flask(__name__)
 context = zmq.Context()
@@ -155,12 +140,17 @@ response_socket.bind("tcp://*:5553")
 # Publisher socket for data request broadcasts
 data_req_socket = context.socket(zmq.PUB)
 data_req_socket.bind("tcp://*:5554")
+
+poller = zmq.Poller()
+poller.register(response_socket, zmq.POLLIN)
+
 # Wait for all workers to start and connect.
 time.sleep(1)
 
 # Endpoint for requesting files
 @app.route('/files/<string:filename>',  methods=['GET'])
 def download_file(filename):
+    start_time = time.time()
     print(f"Downloading file {filename}")
 
     db = get_db()
@@ -172,31 +162,80 @@ def download_file(filename):
     if not file:
         return make_response({"message": f"File {filename} not found"}, 404)
     
-    f = dict(file)
+    fileDict = dict(file)
     db = get_db()
-    cursor = db.execute("SELECT * FROM `Fragments` WHERE `FileID`=?", [f['FileID']])
+    cursor = db.execute("SELECT * FROM `Fragments` WHERE `FileID`=?", [fileDict['FileID']])
     fragments = cursor.fetchall()
     fragmentFiles = []
     receivedFragmentNames = []
 
     for fragment in fragments:
-        f = dict(fragment)
-        if f['FragmentNumber'] not in receivedFragmentNames:
+        fragmentDict = dict(fragment)
+        if fragmentDict['FragmentNumber'] not in receivedFragmentNames:
             request = messages_pb2.getdata_request()
-            request.filename = f['FragmentName']
+            request.filename = fragmentDict['FragmentName']
 
             print(f"Sending request for file: {request.SerializeToString()}")
             data_req_socket.send(request.SerializeToString())
 
-            for _ in range(0,k):
-                response = messages_pb2.getdata_response()
-                response.ParseFromString(response_socket.recv())
-                print(f"Received: file: {response.filename}")
-                fragmentFiles.append(response)
-            receivedFragmentNames.append(f['FragmentNumber'])
+            while True:
+                try:
+                    socks = dict(poller.poll(50))
+                except KeyboardInterrupt:
+                    break
+                
+                if response_socket in socks:
+                    response = messages_pb2.getdata_response()
+                    response.ParseFromString(response_socket.recv())
+                    print(f"Received: file: {response.filename}")
+                    fragmentFiles.append(response)
+                    receivedFragmentNames.append(fragmentDict['FragmentNumber'])
+                else:
+                    break
 
-    print(f"Received: {len(fragmentFiles)} fragments")
-    return make_response({'message': 'File downloaded successfully'}, 200)
+    # Group fragments by fragment name
+    fragment_groups = {}
+    for response in fragmentFiles:
+        fragment_name = response.filename
+        if fragment_name not in fragment_groups:
+            fragment_groups[fragment_name] = []
+        fragment_groups[fragment_name].append(response)
+
+    # Check if all fragments with the same name contain the same file data
+    all_fragments_contain_same_data = True
+    for fragment_name, fragments in fragment_groups.items():
+        first_fragment_data = fragments[0].filedata
+        for fragment in fragments[1:]:
+            if fragment.filedata != first_fragment_data:
+                all_fragments_contain_same_data = False
+                print(f"Fragments with name {fragment_name} do not contain the same file data")
+                break
+        else:
+            print(f"All fragments with name {fragment_name} contain the same file data")
+    if not all_fragments_contain_same_data:
+        return make_response({"message": "Not all fragments contain the same file data"}, 500)
+    else:
+        print(f"Received: {len(fragmentFiles)} fragments")
+        
+        # Combine fragments from lowest fragment number to highest
+        combined_filedata = b""
+        for fragment_number in fragment_groups:
+            combined_filedata += fragment_groups[fragment_number][0].filedata
+
+        if len(combined_filedata) != fileDict['Size']:
+            return make_response({"message": "Received file size does not match expected file size"}, 500)
+        
+        # Save the combined filedata as a file on disk
+        os.makedirs(os.path.join('downloaded_data/'), exist_ok=True)
+        file_path = f"downloaded_data/{filename}"  # Replace with the desired file path
+        with open(file_path, "wb") as file:
+            file.write(combined_filedata)
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(f"Downloaded file: {filename} in time: {execution_time} seconds")
+        
+        return make_response({'message': 'File downloaded and saved successfully'}, 200)
 
 # Endpoint for uploading files
 # Splits file into 4 equal sized fragments and generates k full replicas on N different nodes
@@ -264,8 +303,7 @@ def random_placement(fragments, filesize, filename):
 
     db = get_db()
     cursor = db.execute(
-        "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)",
-        (filename, filesize, 'binary')
+        "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)", (filename, filesize, 'binary')
     )
     db.commit()
     fileId = cursor.lastrowid
@@ -304,8 +342,7 @@ def min_copysets_placement(fragments, filesize, filename):
     # Insert the File record in the DB
     db = get_db()
     cursor = db.execute(
-        "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)",
-        (filename, filesize, 'binary')
+        "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)", (filename, filesize, 'binary')
     )
     db.commit()
     fileId = cursor.lastrowid
@@ -355,8 +392,7 @@ def buddy_approach(fragments, filesize, filename):
     # Insert the File record in the DB
     db = get_db()
     cursor = db.execute(
-        "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)",
-        (filename, filesize, 'binary')
+        "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)", (filename, filesize, 'binary')
     )
     db.commit()
     fileId = cursor.lastrowid
@@ -373,7 +409,7 @@ def buddy_approach(fragments, filesize, filename):
             node = random.choice(selected_group)
             selected_group.remove(node)
             send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")
-            print(f"Sending fragment to node {node}: {fragment}")
+            print(f"Sending fragment {fragmentNumber} to node {node}")
             # Send the fragment to the node using the appropriate method
 
 

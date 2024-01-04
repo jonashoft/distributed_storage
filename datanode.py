@@ -63,12 +63,10 @@ def start_data_node(node_id, port, log_file_path):
         # At this point one or multiple sockets have received a message
         if receiver in socks:
             storedata_message = receiver.recv()
-            print("test receiver")
             handle_storedata_request(storedata_message)
 
         if subscriber in socks:
             getdata_message = subscriber.recv()
-            print("test subscriber")
             handle_getdata_request(getdata_message)
 
 def handle_storedata_request(message):

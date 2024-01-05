@@ -11,8 +11,6 @@ import time
 import threading
 import sys
 
-import re
-
 """
 Utility Functions
 """
@@ -48,6 +46,20 @@ app.teardown_appcontext(close_db)
 
 k = 3
 N = 20
+
+# Calculate numberOfGroups based on N and k
+numberOfGroups = max(1, N // k) # For buddy 
+
+# Create a list of node IDs
+nodes = list(range(N))
+random.shuffle(nodes)
+
+numberOfNodesPerGroup = int(N / numberOfGroups)
+
+# Create a list of groups
+listOfGroups = [nodes[i:i+numberOfNodesPerGroup] for i in range(0, N, numberOfNodesPerGroup)]
+while len(listOfGroups) > numberOfGroups:
+    listOfGroups.pop()  # Remove the last element
 
 def heartbeat_monitor():
     """Background thread function for monitoring heartbeats."""
@@ -144,6 +156,18 @@ poller.register(response_socket, zmq.POLLIN)
 # Wait for all workers to start and connect.
 time.sleep(1)
 
+@app.route('/filename_by_id/<int:id>',  methods=['GET'])
+def get_file_name_from_id(id):
+    db = get_db()
+    cursor = db.execute("SELECT * FROM `Files` WHERE `FileID`=?", [id])
+    if not cursor: 
+        return make_response({"message": "Error connecting to the database"}, 500)
+    
+    file = cursor.fetchone()
+    if not file:
+        return make_response({"message": f"File with ID: {id} not found", 'fileId':id}, 404)
+    return make_response({"filename": dict(file)["Filename"]}, 200)
+
 # Endpoint for requesting files via ID
 @app.route('/file_by_id/<int:id>',  methods=['GET'])
 def download_file_by_id(id):
@@ -154,7 +178,7 @@ def download_file_by_id(id):
     
     file = cursor.fetchone()
     if not file:
-        return make_response({"message": f"File with ID: {id} not found"}, 404)
+        return make_response({"message": f"File with ID: {id} not found", 'fileId':id}, 404)
     return download_file(dict(file)['Filename'])
 
 # Endpoint for requesting files
@@ -245,13 +269,14 @@ def download_file(filename):
         execution_time = end_time - start_time
         print(f"Downloaded file: {filename} in time: {execution_time} seconds")
         
-        return make_response({'message': 'File downloaded and saved successfully'}, 200)
+        return make_response({'message': 'File downloaded and saved successfully', 'downloadTime': execution_time, 'numberOfFragments':len(fragmentFiles)}, 200)
 
 # Endpoint for uploading files
 # Splits file into 4 equal sized fragments and generates k full replicas on N different nodes
 # Implemented a scheme for general k and N
 @app.route('/files', methods=['POST'])
 def add_files():
+    start_time = time.time()
     # Check if file is present in the request
     file = request.files['file']
     file_data = file.read()
@@ -296,8 +321,9 @@ def add_files():
 
     if storageFailed:
         return make_response({'message': 'Storage failed'}, 500)
-    return make_response({'message': f'File uploaded successfully with Id: {fileId}'}, 201)
-#
+    end_time = time.time()
+    execution_time = end_time - start_time
+    return make_response({'message': f'File uploaded successfully with Id: {fileId}', 'fileId':fileId, 'executionTime':execution_time}, 201)
    
 def random_placement(fragments, filesize, filename):
     # Shuffle the list of nodes
@@ -324,6 +350,7 @@ def random_placement(fragments, filesize, filename):
             # Select the next node from the list of replication nodes
             node = replication_nodes.pop()
             send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")  # Send to the first data node for testing
+    return False, fileId
 
 
 def min_copysets_placement(fragments, filesize, filename):
@@ -367,24 +394,13 @@ def min_copysets_placement(fragments, filesize, filename):
 
 def buddy_approach(fragments, filesize, filename):
     # Generate k full replicas on N different nodes
-    # Calculate numberOfGroups based on N and k
-    numberOfGroups = max(1, N // k) # For buddy 
-
-    # Create a list of node IDs
-    nodes = list(range(N))
-    random.shuffle(nodes)
-
+        # Pick a random group of nodes from listOfGroups
+    
     numberOfNodesPerGroup = int(N / numberOfGroups)
     if numberOfNodesPerGroup < k:
         print("Not enough nodes in each group to satisfy the replication factor")
         return True, fileId  # Indicates a failure in storage
 
-    # Create a list of groups
-    listOfGroups = [nodes[i:i+numberOfNodesPerGroup] for i in range(0, N, numberOfNodesPerGroup)]
-    while len(listOfGroups) > numberOfGroups:
-        listOfGroups.pop()  # Remove the last element
-
-    # Pick a random group of nodes from listOfGroups
     random_group = random.choice(listOfGroups)
     print(f"Random group of nodes selected: {random_group}")
 

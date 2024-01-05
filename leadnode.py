@@ -2,7 +2,6 @@ import sqlite3
 import string
 from flask import Flask, make_response,  g, request, jsonify
 import random
-import base64
 import zmq
 import time
 import math
@@ -12,24 +11,17 @@ import time
 import threading
 import sys
 
-import re
-
 """
 Utility Functions
 """
 def get_db():
     if 'db' not in g:
-        g.db = sqlite3.connect(
-            'files.sqlite',
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
+        g.db = sqlite3.connect( 'files.sqlite', detect_types=sqlite3.PARSE_DECLTYPES )
         g.db.row_factory = sqlite3.Row
-
     return g.db
 
 def close_db(e=None):
     db = g.pop('db', None)
-
     if db is not None:
         db.close()
 
@@ -43,16 +35,7 @@ def clear_database():
         db.close()
 
 def random_string(length=8):
-    """
-    Returns a random alphanumeric string of the given length. 
-    Only lowercase ascii letters and numbers are used.
-
-    :param length: Length of the requested random string 
-    :return: The random generated string
-    """
     return ''.join([random.SystemRandom().choice(string.ascii_letters + string.digits) for n in range(length)])
-
-
 
 app = Flask(__name__)
 context = zmq.Context()
@@ -62,7 +45,21 @@ lock = threading.Lock() # Lock for shared resources
 app.teardown_appcontext(close_db)
 
 k = 3
-N = 12
+N = 20
+
+# Calculate numberOfGroups based on N and k
+numberOfGroups = max(1, N // k) # For buddy 
+
+# Create a list of node IDs
+nodes = list(range(N))
+random.shuffle(nodes)
+
+numberOfNodesPerGroup = int(N / numberOfGroups)
+
+# Create a list of groups
+listOfGroups = [nodes[i:i+numberOfNodesPerGroup] for i in range(0, N, numberOfNodesPerGroup)]
+while len(listOfGroups) > numberOfGroups:
+    listOfGroups.pop()  # Remove the last element
 
 def heartbeat_monitor():
     """Background thread function for monitoring heartbeats."""
@@ -123,7 +120,6 @@ def calculate_lost_files():
     fraction_lost = lost_files_count / total_files if total_files > 0 else 0
     return f"Fraction of Lost Files: {fraction_lost:.2%}"
 
-
 @app.route('/lost_files_fraction', methods=['GET'])
 def get_lost_files_fraction():
     try:
@@ -132,8 +128,6 @@ def get_lost_files_fraction():
     except Exception as e:
         # Handling any exceptions that might occur
         return jsonify({"error": str(e)}), 500
-
-
 
 # Function to create and connect sockets
 def create_sockets(context, base_port, number_of_nodes):
@@ -155,12 +149,42 @@ response_socket.bind("tcp://*:5553")
 # Publisher socket for data request broadcasts
 data_req_socket = context.socket(zmq.PUB)
 data_req_socket.bind("tcp://*:5554")
+
+poller = zmq.Poller()
+poller.register(response_socket, zmq.POLLIN)
+
 # Wait for all workers to start and connect.
 time.sleep(1)
 
+@app.route('/filename_by_id/<int:id>',  methods=['GET'])
+def get_file_name_from_id(id):
+    db = get_db()
+    cursor = db.execute("SELECT * FROM `Files` WHERE `FileID`=?", [id])
+    if not cursor: 
+        return make_response({"message": "Error connecting to the database"}, 500)
+    
+    file = cursor.fetchone()
+    if not file:
+        return make_response({"message": f"File with ID: {id} not found", 'fileId':id}, 404)
+    return make_response({"filename": dict(file)["Filename"]}, 200)
+
+# Endpoint for requesting files via ID
+@app.route('/file_by_id/<int:id>',  methods=['GET'])
+def download_file_by_id(id):
+    db = get_db()
+    cursor = db.execute("SELECT * FROM `Files` WHERE `FileID`=?", [id])
+    if not cursor: 
+        return make_response({"message": "Error connecting to the database"}, 500)
+    
+    file = cursor.fetchone()
+    if not file:
+        return make_response({"message": f"File with ID: {id} not found", 'fileId':id}, 404)
+    return download_file(dict(file)['Filename'])
+
 # Endpoint for requesting files
-@app.route('/files/<string:filename>',  methods=['GET'])
+@app.route('/file/<string:filename>',  methods=['GET'])
 def download_file(filename):
+    start_time = time.time()
     print(f"Downloading file {filename}")
 
     db = get_db()
@@ -172,37 +196,87 @@ def download_file(filename):
     if not file:
         return make_response({"message": f"File {filename} not found"}, 404)
     
-    f = dict(file)
+    fileDict = dict(file)
     db = get_db()
-    cursor = db.execute("SELECT * FROM `Fragments` WHERE `FileID`=?", [f['FileID']])
+    cursor = db.execute("SELECT * FROM `Fragments` WHERE `FileID`=?", [fileDict['FileID']])
     fragments = cursor.fetchall()
     fragmentFiles = []
     receivedFragmentNames = []
 
     for fragment in fragments:
-        f = dict(fragment)
-        if f['FragmentNumber'] not in receivedFragmentNames:
+        fragmentDict = dict(fragment)
+        if fragmentDict['FragmentNumber'] not in receivedFragmentNames:
             request = messages_pb2.getdata_request()
-            request.filename = f['FragmentName']
+            request.filename = fragmentDict['FragmentName']
 
             print(f"Sending request for file: {request.SerializeToString()}")
             data_req_socket.send(request.SerializeToString())
 
-            for _ in range(0,k):
-                response = messages_pb2.getdata_response()
-                response.ParseFromString(response_socket.recv())
-                print(f"Received: file: {response.filename}")
-                fragmentFiles.append(response)
-            receivedFragmentNames.append(f['FragmentNumber'])
+            while True:
+                try:
+                    socks = dict(poller.poll(50))
+                except KeyboardInterrupt:
+                    break
+                
+                if response_socket in socks:
+                    response = messages_pb2.getdata_response()
+                    response.ParseFromString(response_socket.recv())
+                    print(f"Received: file: {response.filename}")
+                    fragmentFiles.append(response)
+                    receivedFragmentNames.append(fragmentDict['FragmentNumber'])
+                else:
+                    break
 
-    print(f"Received: {len(fragmentFiles)} fragments")
-    return make_response({'message': 'File downloaded successfully'}, 200)
+    # Group fragments by fragment name
+    fragment_groups = {}
+    for response in fragmentFiles:
+        fragment_name = response.filename
+        if fragment_name not in fragment_groups:
+            fragment_groups[fragment_name] = []
+        fragment_groups[fragment_name].append(response)
+
+    # Check if all fragments with the same name contain the same file data
+    all_fragments_contain_same_data = True
+    for fragment_name, fragments in fragment_groups.items():
+        first_fragment_data = fragments[0].filedata
+        for fragment in fragments[1:]:
+            if fragment.filedata != first_fragment_data:
+                all_fragments_contain_same_data = False
+                print(f"Fragments with name {fragment_name} do not contain the same file data")
+                break
+        else:
+            print(f"All fragments with name {fragment_name} contain the same file data")
+    if not all_fragments_contain_same_data:
+        return make_response({"message": "Not all fragments contain the same file data"}, 500)
+    else:
+        print(f"Received: {len(fragmentFiles)} fragments")
+        
+        # Combine fragments from lowest fragment number to highest
+        combined_filedata = b""
+        for fragment_number in fragment_groups:
+            combined_filedata += fragment_groups[fragment_number][0].filedata
+
+        if len(combined_filedata) != fileDict['Size']:
+            return make_response({"message": "Received file size does not match expected file size"}, 500)
+        
+        # Save the combined filedata as a file on disk
+        os.makedirs(os.path.join('downloaded_data/'), exist_ok=True)
+        file_path = f"downloaded_data/{filename}"  # Replace with the desired file path
+        with open(file_path, "wb") as file:
+            file.write(combined_filedata)
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(f"Downloaded file: {filename} in time: {execution_time} seconds")
+        
+        return make_response({'message': 'File downloaded and saved successfully', 'downloadTime': execution_time, 'numberOfFragments':len(fragmentFiles)}, 200)
 
 # Endpoint for uploading files
 # Splits file into 4 equal sized fragments and generates k full replicas on N different nodes
 # Implemented a scheme for general k and N
 @app.route('/files', methods=['POST'])
 def add_files():
+    start_time = time.time()
     # Check if file is present in the request
     file = request.files['file']
     file_data = file.read()
@@ -229,30 +303,27 @@ def add_files():
     for i in range(0, file_size, fragment_size):
         fragments.append(file_data[i:i+fragment_size])
 
-
-    # Print fragments
-    # print(f"Fragments: {fragments}")
-    print(f"k: {k} \nN: {N}")
-
     # Ensure there are enough nodes to form at least one copyset
     if N < k * len(fragments):
         print("Not enough nodes to form separate copysets for all fragments")
         return
 
-
+    print(f"Distributing '{file.filename}' across {N} nodes using strategy '{strategy}'")
     storageFailed = False
+    fileId = 0
     # Call the appropriate function based on the strategy
     if strategy == 'random':
-        storageFailed = random_placement(fragments, file_size, file.filename)
+        storageFailed, fileId = random_placement(fragments, file_size, file.filename)
     elif strategy == 'min_copysets':
-        storageFailed = min_copysets_placement(fragments, file_size, file.filename)
+        storageFailed, fileId = min_copysets_placement(fragments, file_size, file.filename)
     elif strategy == 'buddy':
-        storageFailed = buddy_approach(fragments, file_size, file.filename)
+        storageFailed, fileId = buddy_approach(fragments, file_size, file.filename)
 
     if storageFailed:
         return make_response({'message': 'Storage failed'}, 500)
-    return make_response({'message': 'File uploaded successfully'}, 201)
-#
+    end_time = time.time()
+    execution_time = end_time - start_time
+    return make_response({'message': f'File uploaded successfully with Id: {fileId}', 'fileId':fileId, 'executionTime':execution_time}, 201)
    
 def random_placement(fragments, filesize, filename):
     # Shuffle the list of nodes
@@ -264,8 +335,7 @@ def random_placement(fragments, filesize, filename):
 
     db = get_db()
     cursor = db.execute(
-        "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)",
-        (filename, filesize, 'binary')
+        "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)", (filename, filesize, 'binary')
     )
     db.commit()
     fileId = cursor.lastrowid
@@ -301,8 +371,7 @@ def min_copysets_placement(fragments, filesize, filename):
     # Insert the File record in the DB
     db = get_db()
     cursor = db.execute(
-        "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)",
-        (filename, filesize, 'binary')
+        "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)", (filename, filesize, 'binary')
     )
     db.commit()
     fileId = cursor.lastrowid
@@ -317,13 +386,11 @@ def min_copysets_placement(fragments, filesize, filename):
             fragmentNumber += 1
             fragmentName = random_fragment_names[i] + f'_fragment{fragmentNumber}'
             send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")
-            # Assuming the node index corresponds to the socket index
-            print(f"Sending fragment: {fragmentNumber} to node {node}")
         fragmentNumber = 0
+    return False, fileId
             
 
 def buddy_approach(fragments, filesize, filename):
-
     # Generate k full replicas on N different nodes
     # Calculate numberOfGroups based on N and k
     numberOfGroups = 2
@@ -336,23 +403,15 @@ def buddy_approach(fragments, filesize, filename):
     numberOfNodesPerGroup = int(N / numberOfGroups)
     if numberOfNodesPerGroup < k:
         print("Not enough nodes in each group to satisfy the replication factor")
-        return True  # Indicates a failure in storage
+        return True, fileId  # Indicates a failure in storage
 
-    # Create a list of groups
-    listOfGroups = [nodes[i:i+numberOfNodesPerGroup] for i in range(0, N, numberOfNodesPerGroup)]
-    while len(listOfGroups) > numberOfGroups:
-        listOfGroups.pop()  # Remove the last element
-    print(f"List of Groups: {listOfGroups}")
-
-    # Pick a random group of nodes from listOfGroups
     random_group = random.choice(listOfGroups)
     print(f"Random group of nodes selected: {random_group}")
 
     # Insert the File record in the DB
     db = get_db()
     cursor = db.execute(
-        "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)",
-        (filename, filesize, 'binary')
+        "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)", (filename, filesize, 'binary')
     )
     db.commit()
     fileId = cursor.lastrowid
@@ -369,8 +428,7 @@ def buddy_approach(fragments, filesize, filename):
             node = random.choice(selected_group)
             selected_group.remove(node)
             send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")
-            print(f"Sending fragment to node {node}: {fragment}")
-            # Send the fragment to the node using the appropriate method
+    return False, fileId
 
 
 def send_data(node_id, filedata, fileId, fragmentNumber, filename="testfile.bin"):
@@ -391,11 +449,6 @@ def send_data(node_id, filedata, fileId, fragmentNumber, filename="testfile.bin"
 
     # Send the serialized data
     sockets[node_id].send(serialized_request)
-    print(f"Sent data to node {node_id}")
-
-# Dummy data generation
-def generate_dummy_data(size=1024):
-    return os.urandom(size)  # Generates random binary data
 
 if __name__ == '__main__':
     # Create an application context

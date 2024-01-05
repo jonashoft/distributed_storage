@@ -47,8 +47,7 @@ app.teardown_appcontext(close_db)
 k = 3
 N = 20
 
-# Calculate numberOfGroups based on N and k
-numberOfGroups = max(1, N // k) # For buddy 
+numberOfGroups = 2 # For buddy 
 
 # Create a list of node IDs
 nodes = list(range(N))
@@ -304,9 +303,9 @@ def add_files():
         fragments.append(file_data[i:i+fragment_size])
 
     # Ensure there are enough nodes to form at least one copyset
-    if N < k * len(fragments):
+    if N < k:
         print("Not enough nodes to form separate copysets for all fragments")
-        return
+        return make_response({'message': 'Not enough nodes to form separate copysets for all fragments'}, 500)
 
     print(f"Distributing '{file.filename}' across {N} nodes using strategy '{strategy}'")
     storageFailed = False
@@ -330,8 +329,12 @@ def random_placement(fragments, filesize, filename):
     nodes = list(range(N))
     random.shuffle(nodes)
 
-    # Select k * fragments random nodes for replication
-    replication_nodes = random.sample(nodes, k * len(fragments))
+    # Select k random nodes for replication
+    if (N > k*len(fragments)):
+        replication_nodes = random.sample(nodes, k*len(fragments))
+    else:
+        replication_nodes = nodes.copy()
+    print("selected nodes: ", replication_nodes)
 
     db = get_db()
     cursor = db.execute(
@@ -347,6 +350,8 @@ def random_placement(fragments, filesize, filename):
         fragmentName = random_string() + f'_fragment{fragmentNumber}'
         # Send the fragment to k number of nodes
         for i in range(k):
+            if (len(replication_nodes) == 0):
+                replication_nodes = nodes.copy()
             # Select the next node from the list of replication nodes
             node = replication_nodes.pop()
             send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")  # Send to the first data node for testing
@@ -359,12 +364,10 @@ def min_copysets_placement(fragments, filesize, filename):
 
     # Create a list of nodes where each list contains k nodes
     replication_groups = [nodes[i:i + k] for i in range(0, len(nodes), k)]
-
     # While length of replication_groups is not divisible by k 
-    while len(replication_groups) % k != 0:
+    while len(replication_groups) % k > 1:
         # Remove the last element
         replication_groups.pop()
-
     # Shuffle groups and select random replication group
     random.shuffle(replication_groups)
     random_group = random.choice(replication_groups)
@@ -394,14 +397,11 @@ def min_copysets_placement(fragments, filesize, filename):
 
 def buddy_approach(fragments, filesize, filename):
     # Generate k full replicas on N different nodes
-        # Pick a random group of nodes from listOfGroups
-    
-    numberOfNodesPerGroup = int(N / numberOfGroups)
-    if numberOfNodesPerGroup < k:
-        print("Not enough nodes in each group to satisfy the replication factor")
-        return True, fileId  # Indicates a failure in storage
-
-    random_group = random.choice(listOfGroups)
+    # Pick a random group of nodes from listOfGroups
+    if (N <= k):
+        random_group = list(range(N))
+    else:
+        random_group = random.choice(listOfGroups)
     print(f"Random group of nodes selected: {random_group}")
 
     # Insert the File record in the DB
@@ -421,6 +421,8 @@ def buddy_approach(fragments, filesize, filename):
         # Send the fragment to k number of nodes in the selected group
         for _ in range(k):
             # Select the next node from the list of nodes in the selected group
+            if (len(selected_group) == 0):
+                selected_group = random_group.copy()
             node = random.choice(selected_group)
             selected_group.remove(node)
             send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")

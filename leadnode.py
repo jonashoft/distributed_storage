@@ -83,7 +83,7 @@ def heartbeat_monitor():
 
 def check_heartbeats():
     """Regularly check for lost nodes."""
-    heartbeat_interval = 240  # seconds
+    heartbeat_interval = 1  # seconds
     heartbeat_tolerance = heartbeat_interval * 3
 
     while True:
@@ -273,15 +273,12 @@ def random_placement(fragments, filesize, filename):
 
     # Send each fragment to k number of nodes
     for fragment in fragments:
+        replication_nodes = random.sample(nodes, k)  # Select k random nodes for each fragment
         fragmentNumber += 1
         fragmentName = random_string() + f'_fragment{fragmentNumber}'
-        # Send the fragment to k number of nodes
-        for i in range(k):
-            # Select the next node from the list of replication nodes
-            node = replication_nodes.pop()
+        for node in replication_nodes:  # Iterate over the selected nodes
             print(f"Sending fragment to node {node}: {fragment}")
-            # Send the fragment to the node using the appropriate method
-            send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")  # Send to the first data node for testing
+            send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")
 
 
 def min_copysets_placement(fragments, filesize, filename):
@@ -329,8 +326,7 @@ def buddy_approach(fragments, filesize, filename):
 
     # Generate k full replicas on N different nodes
     # Calculate numberOfGroups based on N and k
-    numberOfGroups = max(1, N // k) # For buddy 
-
+    numberOfGroups = 2
 
     # Create a list of node IDs
     nodes = list(range(N))
@@ -402,15 +398,6 @@ def generate_dummy_data(size=1024):
     return os.urandom(size)  # Generates random binary data
 
 if __name__ == '__main__':
-    # Default values for k and N
-    k = 3  # Replication factor
-    N = 12  # Number of nodes
-    
-    # Check if command-line arguments are provided
-    if len(sys.argv) >= 3:
-        k = int(sys.argv[1])
-        N = int(sys.argv[2])
-
     # Create an application context
     with app.app_context():
         # Wipe the database clean

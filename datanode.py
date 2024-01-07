@@ -3,7 +3,6 @@ import sys
 import zmq
 import os
 from messages_pb2 import storedata_request, getdata_request, getdata_response, heartbeat
-import messages_pb2
 import time
 import threading
 
@@ -15,10 +14,8 @@ heartbeat_socket = context.socket(zmq.PUSH)
 node_id = None
 data_folder = os.path.join('data')
 
-# Setup signal handler
 def signal_handler(sig, frame):
     print(f'Shutting down node {node_id}...')
-    # Close sockets and terminate ZMQ context
     receiver.close()
     context.term()
     sys.exit(0)
@@ -44,7 +41,6 @@ def start_data_node(node_id, port, log_file_path):
 
     print(f"Data node {node_id} started on port {port}")
 
-    # Start heartbeat thread
     heartbeat_thread = threading.Thread(target=send_heartbeat, args=(node_id,))
     heartbeat_thread.daemon = True
     heartbeat_thread.start()
@@ -55,13 +51,10 @@ def start_data_node(node_id, port, log_file_path):
 
     while True:
         try:
-        # Poll all sockets
             socks = dict(poller.poll())
-            print('test')
         except KeyboardInterrupt:
             break
-
-        # At this point one or multiple sockets have received a message
+        
         if receiver in socks:
             print("Received storedata request")
             storedata_message = receiver.recv()
@@ -73,24 +66,19 @@ def start_data_node(node_id, port, log_file_path):
             handle_getdata_request(getdata_message)
 
 def handle_storedata_request(message):
-    # Parse protobuf message
     request = storedata_request()
     request.ParseFromString(message)
     file_name = request.filename
     file_data = request.filedata
 
-    # Ensure directory exists
     os.makedirs(os.path.join('data', str(node_id)), exist_ok=True)
-    print(data_folder)
-    print(file_name)
-    # Save file content and send back name of bin file
+    
     file_path = os.path.join(data_folder, str(node_id), file_name)
     with open(file_path, "wb") as file:
         file.write(file_data)
     print(f"Saved {file_name} to {file_path}")
 
 def handle_getdata_request(message):
-    # Parse protobuf message
     request = getdata_request()
     request.ParseFromString(message)
     file_name1 = request.fragmentName1
@@ -99,7 +87,7 @@ def handle_getdata_request(message):
     file_name4 = request.fragmentName4
     print(f"Data chunk request: {file_name1}, {file_name2}, {file_name3}, {file_name4}")
 
-    response = messages_pb2.getdata_response()
+    response = getdata_response()
 
     foundAFragment = False
 
@@ -111,7 +99,6 @@ def handle_getdata_request(message):
             response.fragmentData1 = in_file.read()
             foundAFragment = True
     except FileNotFoundError:
-        # The chunk is not stored by this node
         print(f"Did not find chunk {file_name1}")
         pass
 
@@ -123,7 +110,6 @@ def handle_getdata_request(message):
             response.fragmentData2 = in_file.read()
             foundAFragment = True
     except FileNotFoundError:
-        # The chunk is not stored by this node
         print(f"Did not find chunk {file_name2}")
         pass
 
@@ -135,7 +121,6 @@ def handle_getdata_request(message):
             response.fragmentData3 = in_file.read()
             foundAFragment = True
     except FileNotFoundError:
-        # The chunk is not stored by this node
         print(f"Did not find chunk {file_name3}")
         pass
 
@@ -147,7 +132,6 @@ def handle_getdata_request(message):
             response.fragmentData4 = in_file.read()
             foundAFragment = True
     except FileNotFoundError:
-        # The chunk is not stored by this node
         print(f"Did not find chunk {file_name4}")
         pass
     if foundAFragment:
@@ -155,7 +139,7 @@ def handle_getdata_request(message):
         sender.send(response.SerializeToString())
 
 def send_heartbeat(node_id, interval=240):
-    heartbeat_socket.connect("tcp://localhost:5556")  # Specify the correct address and port
+    heartbeat_socket.connect("tcp://localhost:5556")
 
     while True:
         heartbeat_message = heartbeat()

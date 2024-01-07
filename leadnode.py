@@ -55,16 +55,14 @@ else:
 
 numberOfGroups = 2 # For buddy 
 
-# Create a list of node IDs
 nodes = list(range(N))
 random.shuffle(nodes)
 
 numberOfNodesPerGroup = int(N / numberOfGroups)
 
-# Create a list of groups
 listOfGroups = [nodes[i:i+numberOfNodesPerGroup] for i in range(0, N, numberOfNodesPerGroup)]
 while len(listOfGroups) > numberOfGroups:
-    listOfGroups.pop()  # Remove the last element
+    listOfGroups.pop()  # Remove the last element until the length of the list is equal to numberOfGroups
 
 def heartbeat_monitor():
     """Background thread function for monitoring heartbeats."""
@@ -135,7 +133,6 @@ def get_lost_files_fraction():
         lost_files_fraction = calculate_lost_files()
         return jsonify({"fraction_of_lost_files": lost_files_fraction}), 200
     except Exception as e:
-        # Handling any exceptions that might occur
         return jsonify({"error": str(e)}), 500
 
 # Function to create and connect sockets
@@ -177,7 +174,6 @@ def get_file_name_from_id(id):
         return make_response({"message": f"File with ID: {id} not found", 'fileId':id}, 404)
     return make_response({"filename": dict(file)["Filename"]}, 200)
 
-# Endpoint for requesting files via ID
 @app.route('/file_by_id/<int:id>',  methods=['GET'])
 def download_file_by_id(id):
     start_time = time.time()
@@ -230,7 +226,6 @@ def download_file_by_id(id):
         if response_socket in socks:
             response = messages_pb2.getdata_response()
             response.ParseFromString(response_socket.recv())
-            # print(f"received response: {response.SerializeToString()}")
             if (response.fragmentName1 != '' and response.fragmentName1 not in receivedFragmentNames):
                 print(f"Received: file: {response.fragmentName1}")
                 if (response.fragmentName1 in fragmentNames):
@@ -259,12 +254,6 @@ def download_file_by_id(id):
                     receivedFragmentNames.append(response.fragmentName4)
                 else:
                     wrongFragmentsReceived += 1
-            # if (response.fragmentName1 in fragmentNames or response.fragmentName2 in fragmentNames
-            #     or response.fragmentName3 in fragmentNames or response.fragmentName4 in fragmentNames):
-                
-            # else:
-            #     wrongFragmentsReceived += 1
-            #     print(f"Received wrong fragment: {response.fragmentName1}, {response.fragmentName2}, {response.fragmentName3}, {response.fragmentName4}")
         else:
             break
     combined_filedata = b"".join(fragmentFiles)
@@ -272,9 +261,8 @@ def download_file_by_id(id):
     if len(combined_filedata) != fileDict['Size']:
         return make_response({"message": "Received file size does not match expected file size", 'expectedSize':fileDict['Size'], 'actualSize':len(combined_filedata), 'receivedFragments':receivedFragmentNames, 'fragmentNames':fragmentNames, 'wrongFragmentsReceived':wrongFragmentsReceived}, 500)
 
-    # Save the combined filedata as a file on disk
     os.makedirs(os.path.join('downloaded_data/'), exist_ok=True)
-    file_path = f"downloaded_data/{filename}"  # Replace with the desired file path
+    file_path = f"downloaded_data/{filename}"
     with open(file_path, "wb") as file:
         file.write(combined_filedata)
 
@@ -284,8 +272,6 @@ def download_file_by_id(id):
     
     return make_response({'message': 'File downloaded and saved successfully', 'downloadTime': execution_time, 'numberOfFragments':len(fragmentFiles), 'wrongFragmentsReceived':wrongFragmentsReceived}, 200)
 
-
-# Endpoint for requesting files
 @app.route('/file/<string:filename>',  methods=['GET'])
 def download_file(filename, id=None):
     start_time = time.time()
@@ -334,9 +320,6 @@ def download_file(filename, id=None):
 
     while True:
         try:
-            # receivedFragmentNames.sort(key=lambda x: x[-5:])
-            # if (receivedFragmentNames == fragmentNames):
-            #     break
             socks = dict(poller.poll(100))
         except KeyboardInterrupt:
             break
@@ -364,12 +347,6 @@ def download_file(filename, id=None):
                 if (response.fragmentName4 in fragmentNames):
                     fragmentFiles.append(response.fragmentData4)
                     receivedFragmentNames.append(response.fragmentName4)
-            # if (response.fragmentName1 in fragmentNames or response.fragmentName2 in fragmentNames
-            #     or response.fragmentName3 in fragmentNames or response.fragmentName4 in fragmentNames):
-                
-            # else:
-            #     wrongFragmentsReceived += 1
-            #     print(f"Received wrong fragment: {response.fragmentName1}, {response.fragmentName2}, {response.fragmentName3}, {response.fragmentName4}")
         else:
             break
     combined_filedata = b"".join(fragmentFiles)
@@ -377,9 +354,8 @@ def download_file(filename, id=None):
     if len(combined_filedata) != fileDict['Size']:
         return make_response({"message": "Received file size does not match expected file size", 'expectedSize':fileDict['Size'], 'actualSize':len(combined_filedata), 'receivedFragments':receivedFragmentNames, 'fragmentFiles':fragmentFiles, 'fragmentNames':fragmentNames}, 500)
 
-    # Save the combined filedata as a file on disk
     os.makedirs(os.path.join('downloaded_data/'), exist_ok=True)
-    file_path = f"downloaded_data/{filename}"  # Replace with the desired file path
+    file_path = f"downloaded_data/{filename}"
     with open(file_path, "wb") as file:
         file.write(combined_filedata)
 
@@ -395,29 +371,23 @@ def download_file(filename, id=None):
 @app.route('/files', methods=['POST'])
 def add_files():
     start_time = time.time()
-    # Check if file is present in the request
     file = request.files['file']
     file_data = file.read()
     if file_data is None:
         return make_response({'message': 'Missing file parameters'}, 400)
 
-    # Extract the strategy parameter from the request
     strategy = request.form.get('strategy')
     if not strategy:
         return make_response({'message': 'Missing strategy parameter'}, 400)
     
-    # Validate strategy
     valid_strategies = ['random', 'min_copysets', 'buddy']
     if strategy not in valid_strategies:
         return make_response({'message': 'Invalid strategy parameter'}, 400)
 
-    # Split file into 4 equal sized fragments
     file_size = len(file_data)
-
     fragment_size = math.ceil(file_size / 4)
     fragments = []
 
-    # Create fragments
     for i in range(0, file_size, fragment_size):
         fragments.append(file_data[i:i+fragment_size])
 
@@ -429,7 +399,7 @@ def add_files():
     print(f"Distributing '{file.filename}' across {N} nodes using strategy '{strategy}'")
     storageFailed = False
     fileId = 0
-    # Call the appropriate function based on the strategy
+
     if strategy == 'random':
         storageFailed, fileId = random_placement(fragments, file_size, file.filename)
     elif strategy == 'min_copysets':
@@ -444,11 +414,9 @@ def add_files():
     return make_response({'message': f'File uploaded successfully with Id: {fileId}', 'fileId':fileId, 'executionTime':execution_time}, 201)
    
 def random_placement(fragments, filesize, filename):
-    # Shuffle the list of nodes
     nodes = list(range(N))
     random.shuffle(nodes)
-
-    # Select k random nodes for replication
+    
     if (N > k*len(fragments)):
         replication_nodes = random.sample(nodes, k*len(fragments))
     else:
@@ -463,37 +431,29 @@ def random_placement(fragments, filesize, filename):
     fileId = cursor.lastrowid
     fragmentNumber = 0
 
-    # Send each fragment to k number of nodes
     for fragment in fragments:
-        replication_nodes = random.sample(nodes, k)  # Select k random nodes for each fragment
+        replication_nodes = random.sample(nodes, k)
         fragmentNumber += 1
         fragmentName = random_string() + f'_fragment{fragmentNumber}'
-        # Send the fragment to k number of nodes
         for i in range(k):
             if (len(replication_nodes) == 0):
                 replication_nodes = nodes.copy()
-            # Select the next node from the list of replication nodes
             node = replication_nodes.pop()
-            send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")  # Send to the first data node for testing
+            send_data(node, fragment, fileId, fragmentNumber, fragmentName+".bin")
     return False, fileId
 
 
 def min_copysets_placement(fragments, filesize, filename):
-    # Create a list of node IDs
     nodes = list(range(N))
-
-    # Create a list of nodes where each list contains k nodes
     replication_groups = [nodes[i:i + k] for i in range(0, len(nodes), k)]
-    # While length of replication_groups is not divisible by k 
+    
     while len(replication_groups) % k > 1:
-        # Remove the last element
         replication_groups.pop()
-    # Shuffle groups and select random replication group
+        
     random.shuffle(replication_groups)
     random_group = random.choice(replication_groups)
     print("selected group: ", random_group)
 
-    # Insert the File record in the DB
     db = get_db()
     cursor = db.execute(
         "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)", (filename, filesize, 'binary')
@@ -503,10 +463,8 @@ def min_copysets_placement(fragments, filesize, filename):
     fragmentNumber = 0
 
     random_fragment_names = [random_string() for _ in range(4)]
-
-    # Send all fragments to each node in random_group
+    
     for node in random_group:
-        # Send each fragment to each node in the selected replication group
         for i, fragment in enumerate(fragments):
             fragmentNumber += 1
             fragmentName = random_fragment_names[i] + f'_fragment{fragmentNumber}'
@@ -523,8 +481,7 @@ def buddy_approach(fragments, filesize, filename):
     else:
         random_group = random.choice(listOfGroups)
     print(f"Random group of nodes selected: {random_group}")
-
-    # Insert the File record in the DB
+    
     db = get_db()
     cursor = db.execute(
         "INSERT INTO `Files`(`Filename`, `Size`, `ContentType`) VALUES (?,?,?)", (filename, filesize, 'binary')
@@ -532,15 +489,12 @@ def buddy_approach(fragments, filesize, filename):
     db.commit()
     fileId = cursor.lastrowid
     fragmentNumber = 0
-
-    # Send each fragment to k number of nodes in the selected group
+    
     for fragment in fragments:
         fragmentNumber += 1
         selected_group = random_group.copy()
         fragmentName = random_string() + f'_fragment{fragmentNumber}'
-        # Send the fragment to k number of nodes in the selected group
         for _ in range(k):
-            # Select the next node from the list of nodes in the selected group
             if (len(selected_group) == 0):
                 selected_group = random_group.copy()
             node = random.choice(selected_group)
@@ -550,12 +504,10 @@ def buddy_approach(fragments, filesize, filename):
 
 
 def send_data(node_id, filedata, fileId, fragmentNumber, filename="testfile.bin"):
-    # Create a Protobuf message
     request = messages_pb2.storedata_request()
     request.filename = filename
-    request.filedata = filedata  # Your dummy binary data
-
-    # Serialize the Protobuf message
+    request.filedata = filedata
+    
     serialized_request = request.SerializeToString()
 
     db = get_db()
@@ -564,19 +516,16 @@ def send_data(node_id, filedata, fileId, fragmentNumber, filename="testfile.bin"
         (fileId, filename, fragmentNumber, node_id)
     )
     db.commit()
-
-    # Send the serialized data
+    
     sockets[node_id].send(serialized_request)
 
 if __name__ == '__main__':
-    # Create an application context
+    # Clean up database before starting
     with app.app_context():
-        # Wipe the database clean
         clear_database()
 
     # Start heartbeat monitoring in a separate thread
     threading.Thread(target=heartbeat_monitor, daemon=True).start()
     threading.Thread(target=check_heartbeats, daemon=True).start()
-
-    # Run Flask app
+    
     app.run(host="localhost", port=5555)

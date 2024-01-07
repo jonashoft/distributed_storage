@@ -8,13 +8,22 @@ message storedata_request
 
 message getdata_request
 {
-    string filename = 1;
+    string fragmentName1 = 1;
+    string fragmentName2 = 2;
+    string fragmentName3 = 3;
+    string fragmentName4 = 4;
 }
 
 message getdata_response
 {
-    string filename = 1;
-    bytes filedata = 2;
+    string fragmentName1 = 1;
+    bytes fragmentData1 = 2;
+    string fragmentName2 = 3;
+    bytes fragmentData2 = 4;
+    string fragmentName3 = 5;
+    bytes fragmentData3 = 6;
+    string fragmentName4 = 7;
+    bytes fragmentData4 = 8;
 }
 
 message heartbeat

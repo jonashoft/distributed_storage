@@ -57,15 +57,18 @@ def start_data_node(node_id, port, log_file_path):
         try:
         # Poll all sockets
             socks = dict(poller.poll())
+            print('test')
         except KeyboardInterrupt:
             break
 
         # At this point one or multiple sockets have received a message
         if receiver in socks:
+            print("Received storedata request")
             storedata_message = receiver.recv()
             handle_storedata_request(storedata_message)
 
         if subscriber in socks:
+            print("Received getdata request")
             getdata_message = subscriber.recv()
             handle_getdata_request(getdata_message)
 
@@ -90,24 +93,66 @@ def handle_getdata_request(message):
     # Parse protobuf message
     request = getdata_request()
     request.ParseFromString(message)
-    file_name = request.filename
-    print(f"Data chunk request: {file_name}")
+    file_name1 = request.fragmentName1
+    file_name2 = request.fragmentName2
+    file_name3 = request.fragmentName3
+    file_name4 = request.fragmentName4
+    print(f"Data chunk request: {file_name1}, {file_name2}, {file_name3}, {file_name4}")
 
     response = messages_pb2.getdata_response()
-    response.filename = file_name
 
-    # Try to load the requested file from the local file system,
-    # send response only if found
+    foundAFragment = False
+
     try:
-        file_path = os.path.join(data_folder, str(node_id), file_name)
+        file_path = os.path.join(data_folder, str(node_id), file_name1)
         with open(file_path, "rb") as in_file:
-            print(f"Found chunk {file_name}, sending it back")
-            response.filedata = in_file.read()
-            sender.send(response.SerializeToString())
+            print(f"Found chunk {file_name1}, sending it back")
+            response.fragmentName1 = file_name1
+            response.fragmentData1 = in_file.read()
+            foundAFragment = True
     except FileNotFoundError:
         # The chunk is not stored by this node
-        print(f"Did not find chunk {file_name}")
+        print(f"Did not find chunk {file_name1}")
         pass
+
+    try:
+        file_path = os.path.join(data_folder, str(node_id), file_name2)
+        with open(file_path, "rb") as in_file:
+            print(f"Found chunk {file_name2}, sending it back")
+            response.fragmentName2 = file_name2
+            response.fragmentData2 = in_file.read()
+            foundAFragment = True
+    except FileNotFoundError:
+        # The chunk is not stored by this node
+        print(f"Did not find chunk {file_name2}")
+        pass
+
+    try:
+        file_path = os.path.join(data_folder, str(node_id), file_name3)
+        with open(file_path, "rb") as in_file:
+            print(f"Found chunk {file_name3}, sending it back")
+            response.fragmentName3 = file_name3
+            response.fragmentData3 = in_file.read()
+            foundAFragment = True
+    except FileNotFoundError:
+        # The chunk is not stored by this node
+        print(f"Did not find chunk {file_name3}")
+        pass
+
+    try:
+        file_path = os.path.join(data_folder, str(node_id), file_name4)
+        with open(file_path, "rb") as in_file:
+            print(f"Found chunk {file_name4}, sending it back")
+            response.fragmentName4 = file_name4
+            response.fragmentData4 = in_file.read()
+            foundAFragment = True
+    except FileNotFoundError:
+        # The chunk is not stored by this node
+        print(f"Did not find chunk {file_name4}")
+        pass
+    if foundAFragment:
+        print("Found a fragment")
+        sender.send(response.SerializeToString())
 
 def send_heartbeat(node_id, interval=240):
     heartbeat_socket.connect("tcp://localhost:5556")  # Specify the correct address and port

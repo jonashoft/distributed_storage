@@ -11,6 +11,7 @@ import time
 import threading
 import sys
 
+
 """
 Utility Functions
 """
@@ -44,8 +45,13 @@ lost_nodes = []  # List of lost nodes
 lock = threading.Lock() # Lock for shared resources
 app.teardown_appcontext(close_db)
 
-k = 3
-N = 20
+if len(sys.argv) >= 3:
+    print("Using command-line arguments")
+    k = int(sys.argv[1])
+    N = int(sys.argv[2])
+else:
+    k = 3
+    N = 24  
 
 numberOfGroups = 2 # For buddy 
 
@@ -119,6 +125,10 @@ def calculate_lost_files():
     fraction_lost = lost_files_count / total_files if total_files > 0 else 0
     return f"Fraction of Lost Files: {fraction_lost:.2%}"
 
+@app.route('/get_metrics', methods=['GET'])
+def get_metrics():
+    return make_response({"k": k, 'N':N}, 200)
+
 @app.route('/lost_files_fraction', methods=['GET'])
 def get_lost_files_fraction():
     try:
@@ -170,6 +180,8 @@ def get_file_name_from_id(id):
 # Endpoint for requesting files via ID
 @app.route('/file_by_id/<int:id>',  methods=['GET'])
 def download_file_by_id(id):
+    start_time = time.time()
+    print(f"Downloading file from id {id}")
     db = get_db()
     cursor = db.execute("SELECT * FROM `Files` WHERE `FileID`=?", [id])
     if not cursor: 
@@ -178,19 +190,117 @@ def download_file_by_id(id):
     file = cursor.fetchone()
     if not file:
         return make_response({"message": f"File with ID: {id} not found", 'fileId':id}, 404)
-    return download_file(dict(file)['Filename'])
+    fileDict = dict(file)
+
+    filename = fileDict['Filename']
+    db = get_db()
+    cursor = db.execute("SELECT * FROM `Fragments` WHERE `FileID`=?", [id])
+    fragments = cursor.fetchall()
+    fragmentFiles = []
+    receivedFragmentNames = []
+    fragmentNames = []
+    fragmentNumbers = []
+
+    for fragment in fragments:
+        fragmentDict = dict(fragment)
+        if fragmentDict['FragmentNumber'] not in fragmentNumbers:
+            fragmentNumbers.append(fragmentDict['FragmentNumber'])
+            fragmentNames.append(fragmentDict['FragmentName'])
+    fragmentNames.sort(key=lambda x: x[-5:])
+    getdata_request = messages_pb2.getdata_request()
+    getdata_request.fragmentName1 = fragmentNames[0]
+    getdata_request.fragmentName2 = fragmentNames[1]
+    getdata_request.fragmentName3 = fragmentNames[2]
+    getdata_request.fragmentName4 = fragmentNames[3]
+
+    print(f"Sending request for file: {getdata_request.SerializeToString()}")
+    data_req_socket.send(getdata_request.SerializeToString())
+    
+    wrongFragmentsReceived = 0
+
+    while True:
+        try:
+            receivedFragmentNames.sort(key=lambda x: x[-5:])
+            if (receivedFragmentNames == fragmentNames):
+                break
+            socks = dict(poller.poll(100000))
+        except KeyboardInterrupt:
+            break
+
+        if response_socket in socks:
+            response = messages_pb2.getdata_response()
+            response.ParseFromString(response_socket.recv())
+            # print(f"received response: {response.SerializeToString()}")
+            if (response.fragmentName1 != '' and response.fragmentName1 not in receivedFragmentNames):
+                print(f"Received: file: {response.fragmentName1}")
+                if (response.fragmentName1 in fragmentNames):
+                    fragmentFiles.append(response.fragmentData1)
+                    receivedFragmentNames.append(response.fragmentName1)
+                else:
+                    wrongFragmentsReceived += 1
+            if (response.fragmentName2 != '' and response.fragmentName2 not in receivedFragmentNames):
+                print(f"Received: file: {response.fragmentName2}")
+                if (response.fragmentName2 in fragmentNames):
+                    fragmentFiles.append(response.fragmentData2)
+                    receivedFragmentNames.append(response.fragmentName2)
+                else:
+                    wrongFragmentsReceived += 1
+            if (response.fragmentName3 != '' and response.fragmentName3 not in receivedFragmentNames):
+                print(f"Received: file: {response.fragmentName3}")
+                if (response.fragmentName3 in fragmentNames):
+                    fragmentFiles.append(response.fragmentData3)
+                    receivedFragmentNames.append(response.fragmentName3)
+                else:
+                    wrongFragmentsReceived += 1
+            if (response.fragmentName4 != '' and response.fragmentName4 not in receivedFragmentNames):
+                print(f"Received: file: {response.fragmentName4}")
+                if (response.fragmentName4 in fragmentNames):
+                    fragmentFiles.append(response.fragmentData4)
+                    receivedFragmentNames.append(response.fragmentName4)
+                else:
+                    wrongFragmentsReceived += 1
+            # if (response.fragmentName1 in fragmentNames or response.fragmentName2 in fragmentNames
+            #     or response.fragmentName3 in fragmentNames or response.fragmentName4 in fragmentNames):
+                
+            # else:
+            #     wrongFragmentsReceived += 1
+            #     print(f"Received wrong fragment: {response.fragmentName1}, {response.fragmentName2}, {response.fragmentName3}, {response.fragmentName4}")
+        else:
+            break
+    combined_filedata = b"".join(fragmentFiles)
+    
+    if len(combined_filedata) != fileDict['Size']:
+        return make_response({"message": "Received file size does not match expected file size", 'expectedSize':fileDict['Size'], 'actualSize':len(combined_filedata), 'receivedFragments':receivedFragmentNames, 'fragmentNames':fragmentNames, 'wrongFragmentsReceived':wrongFragmentsReceived}, 500)
+
+    # Save the combined filedata as a file on disk
+    os.makedirs(os.path.join('downloaded_data/'), exist_ok=True)
+    file_path = f"downloaded_data/{filename}"  # Replace with the desired file path
+    with open(file_path, "wb") as file:
+        file.write(combined_filedata)
+
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print(f"Downloaded file: {filename} in time: {execution_time} seconds")
+    
+    return make_response({'message': 'File downloaded and saved successfully', 'downloadTime': execution_time, 'numberOfFragments':len(fragmentFiles), 'wrongFragmentsReceived':wrongFragmentsReceived}, 200)
+
 
 # Endpoint for requesting files
 @app.route('/file/<string:filename>',  methods=['GET'])
-def download_file(filename):
+def download_file(filename, id=None):
     start_time = time.time()
     print(f"Downloading file {filename}")
-
-    db = get_db()
-    cursor = db.execute("SELECT * FROM `Files` WHERE `Filename`=?", [filename])
-    if not cursor: 
-        return make_response({"message": "Error connecting to the database"}, 500)
-    
+    if (id == None):
+        db = get_db()
+        cursor = db.execute("SELECT * FROM `Files` WHERE `Filename`=?", [filename])
+        if not cursor: 
+            return make_response({"message": "Error connecting to the database"}, 500)
+    else:
+        db = get_db()
+        cursor = db.execute("SELECT * FROM `Files` WHERE `FileID`=?", [id])
+        if not cursor: 
+            return make_response({"message": "Error connecting to the database"}, 500)
+        
     file = cursor.fetchone()
     if not file:
         return make_response({"message": f"File {filename} not found"}, 404)
@@ -201,74 +311,83 @@ def download_file(filename):
     fragments = cursor.fetchall()
     fragmentFiles = []
     receivedFragmentNames = []
+    fragmentNames = []
+    fragmentNumbers = []
 
     for fragment in fragments:
         fragmentDict = dict(fragment)
-        if fragmentDict['FragmentNumber'] not in receivedFragmentNames:
-            request = messages_pb2.getdata_request()
-            request.filename = fragmentDict['FragmentName']
+        print(fragmentDict)
+        if fragmentDict['FragmentNumber'] not in fragmentNumbers:
+            fragmentNumbers.append(fragmentDict['FragmentNumber'])
+            fragmentNames.append(fragmentDict['FragmentName'])
+    fragmentNames.sort(key=lambda x: x[-5:])
+    getdata_request = messages_pb2.getdata_request()
+    getdata_request.fragmentName1 = fragmentNames[0]
+    getdata_request.fragmentName2 = fragmentNames[1]
+    getdata_request.fragmentName3 = fragmentNames[2]
+    getdata_request.fragmentName4 = fragmentNames[3]
 
-            print(f"Sending request for file: {request.SerializeToString()}")
-            data_req_socket.send(request.SerializeToString())
+    print(f"Sending request for file: {getdata_request.SerializeToString()}")
+    data_req_socket.send(getdata_request.SerializeToString())
+    
+    wrongFragmentsReceived = 0
 
-            while True:
-                try:
-                    socks = dict(poller.poll(50))
-                except KeyboardInterrupt:
-                    break
+    while True:
+        try:
+            # receivedFragmentNames.sort(key=lambda x: x[-5:])
+            # if (receivedFragmentNames == fragmentNames):
+            #     break
+            socks = dict(poller.poll(100))
+        except KeyboardInterrupt:
+            break
+
+        if response_socket in socks:
+            response = messages_pb2.getdata_response()
+            response.ParseFromString(response_socket.recv())
+            if (response.fragmentName1 != '' and response.fragmentName1 not in receivedFragmentNames):
+                print(f"Received: file: {response.fragmentName1}")
+                if (response.fragmentName1 in fragmentNames):
+                    fragmentFiles.append(response.fragmentData1)
+                    receivedFragmentNames.append(response.fragmentName1)
+            if (response.fragmentName2 != '' and response.fragmentName2 not in receivedFragmentNames):
+                print(f"Received: file: {response.fragmentName2}")
+                if (response.fragmentName2 in fragmentNames):
+                    fragmentFiles.append(response.fragmentData2)
+                    receivedFragmentNames.append(response.fragmentName2)
+            if (response.fragmentName3 != '' and response.fragmentName3 not in receivedFragmentNames):
+                print(f"Received: file: {response.fragmentName3}")
+                if (response.fragmentName3 in fragmentNames):
+                    fragmentFiles.append(response.fragmentData3)
+                    receivedFragmentNames.append(response.fragmentName3)
+            if (response.fragmentName4 != '' and response.fragmentName4 not in receivedFragmentNames):
+                print(f"Received: file: {response.fragmentName4}")
+                if (response.fragmentName4 in fragmentNames):
+                    fragmentFiles.append(response.fragmentData4)
+                    receivedFragmentNames.append(response.fragmentName4)
+            # if (response.fragmentName1 in fragmentNames or response.fragmentName2 in fragmentNames
+            #     or response.fragmentName3 in fragmentNames or response.fragmentName4 in fragmentNames):
                 
-                if response_socket in socks:
-                    response = messages_pb2.getdata_response()
-                    response.ParseFromString(response_socket.recv())
-                    print(f"Received: file: {response.filename}")
-                    fragmentFiles.append(response)
-                    receivedFragmentNames.append(fragmentDict['FragmentNumber'])
-                else:
-                    break
-
-    # Group fragments by fragment name
-    fragment_groups = {}
-    for response in fragmentFiles:
-        fragment_name = response.filename
-        if fragment_name not in fragment_groups:
-            fragment_groups[fragment_name] = []
-        fragment_groups[fragment_name].append(response)
-
-    # Check if all fragments with the same name contain the same file data
-    all_fragments_contain_same_data = True
-    for fragment_name, fragments in fragment_groups.items():
-        first_fragment_data = fragments[0].filedata
-        for fragment in fragments[1:]:
-            if fragment.filedata != first_fragment_data:
-                all_fragments_contain_same_data = False
-                print(f"Fragments with name {fragment_name} do not contain the same file data")
-                break
+            # else:
+            #     wrongFragmentsReceived += 1
+            #     print(f"Received wrong fragment: {response.fragmentName1}, {response.fragmentName2}, {response.fragmentName3}, {response.fragmentName4}")
         else:
-            print(f"All fragments with name {fragment_name} contain the same file data")
-    if not all_fragments_contain_same_data:
-        return make_response({"message": "Not all fragments contain the same file data"}, 500)
-    else:
-        print(f"Received: {len(fragmentFiles)} fragments")
-        
-        # Combine fragments from lowest fragment number to highest
-        combined_filedata = b""
-        for fragment_number in fragment_groups:
-            combined_filedata += fragment_groups[fragment_number][0].filedata
+            break
+    combined_filedata = b"".join(fragmentFiles)
+    
+    if len(combined_filedata) != fileDict['Size']:
+        return make_response({"message": "Received file size does not match expected file size", 'expectedSize':fileDict['Size'], 'actualSize':len(combined_filedata), 'receivedFragments':receivedFragmentNames, 'fragmentFiles':fragmentFiles, 'fragmentNames':fragmentNames}, 500)
 
-        if len(combined_filedata) != fileDict['Size']:
-            return make_response({"message": "Received file size does not match expected file size"}, 500)
-        
-        # Save the combined filedata as a file on disk
-        os.makedirs(os.path.join('downloaded_data/'), exist_ok=True)
-        file_path = f"downloaded_data/{filename}"  # Replace with the desired file path
-        with open(file_path, "wb") as file:
-            file.write(combined_filedata)
+    # Save the combined filedata as a file on disk
+    os.makedirs(os.path.join('downloaded_data/'), exist_ok=True)
+    file_path = f"downloaded_data/{filename}"  # Replace with the desired file path
+    with open(file_path, "wb") as file:
+        file.write(combined_filedata)
 
-        end_time = time.time()
-        execution_time = end_time - start_time
-        print(f"Downloaded file: {filename} in time: {execution_time} seconds")
-        
-        return make_response({'message': 'File downloaded and saved successfully', 'downloadTime': execution_time, 'numberOfFragments':len(fragmentFiles)}, 200)
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print(f"Downloaded file: {filename} in time: {execution_time} seconds")
+    
+    return make_response({'message': 'File downloaded and saved successfully', 'downloadTime': execution_time, 'numberOfFragments':len(fragmentFiles), 'wrongFragmentsReceived':wrongFragmentsReceived}, 200)
 
 # Endpoint for uploading files
 # Splits file into 4 equal sized fragments and generates k full replicas on N different nodes

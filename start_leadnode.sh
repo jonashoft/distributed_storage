@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# start_datanodes.sh
-
 K=$1
 N=$2
 PID_FILE="leadnode_pid.txt"

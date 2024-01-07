@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# start_datanodes.sh
-
 BASE_PORT=5557
 NUMBER_OF_NODES=$1
 PID_FILE="datanode_pids.txt"

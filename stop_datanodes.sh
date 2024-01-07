@@ -12,7 +12,6 @@ while read PID; do
     echo "Killed data node with PID $PID"
 done < $PID_FILE
 
-# Remove the PID file
 rm $PID_FILE
 
 echo "All data nodes stopped."
